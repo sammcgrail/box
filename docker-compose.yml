@@ -1,0 +1,17 @@
+services:
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - caddy_data:/data       # Caddy stores ACME certs here
+      - caddy_config:/config   # Caddy runtime config
+
+volumes:
+  caddy_data:
+  caddy_config:
