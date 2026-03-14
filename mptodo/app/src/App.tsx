@@ -19,10 +19,10 @@ const TodoItem = memo(function TodoItem({
   onDelete: (id: string) => void;
 }) {
   return (
-    <li className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 group hover:border-zinc-700 transition-colors">
+    <li className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 group hover:border-zinc-700 transition-colors">
       <button
         onClick={() => onToggle(todo.id)}
-        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+        className={`w-4 h-4 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
           todo.done ? "bg-zinc-500 border-zinc-500" : "border-zinc-600 hover:border-zinc-400"
         }`}
       >
@@ -37,7 +37,7 @@ const TodoItem = memo(function TodoItem({
       </span>
       <button
         onClick={() => onDelete(todo.id)}
-        className="text-zinc-700 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-all p-0.5 flex-shrink-0"
+        className="text-zinc-700 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-all p-0.5 flex-shrink-0 mt-0.5"
         aria-label="Delete"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14">
