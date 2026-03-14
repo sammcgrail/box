@@ -12,6 +12,14 @@
         reverse_proxy host.docker.internal:8765
     }
 
+    # scratch metrics dashboard (basic auth protected)
+    handle /scratch* {
+        basicauth {
+            seb $2a$14$0.SeIVFOQocN6SKk.jVtGeTqh2C1ksc/VEStWdSWCi8IpA71PHMvy
+        }
+        reverse_proxy host.docker.internal:8766
+    }
+
     # SPA — all other paths
     handle {
         root * /srv
