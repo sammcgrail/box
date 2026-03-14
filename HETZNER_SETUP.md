@@ -1,6 +1,6 @@
 # Hetzner Server Setup
 
-Steps to configure the Hetzner server and deploy this stack from scratch.
+Steps to get the server running from scratch.
 
 ---
 
@@ -10,8 +10,8 @@ Steps to configure the Hetzner server and deploy this stack from scratch.
 
 In the [Hetzner Cloud Console](https://console.hetzner.cloud):
 
-1. Go to **Firewalls** → create a new firewall (or edit the one attached to your server).
-2. Add the following **Inbound** rules:
+1. Go to **Firewalls** → create or edit the firewall attached to your server.
+2. Set these **Inbound** rules (nothing else):
 
 | Protocol | Port | Source    | Description   |
 |----------|------|-----------|---------------|
@@ -20,138 +20,72 @@ In the [Hetzner Cloud Console](https://console.hetzner.cloud):
 | UDP      | 443  | 0.0.0.0/0 | HTTP/3 (QUIC) |
 
 3. Attach the firewall to your server.
-4. Make sure port 22 is **not** open — access the server via Tailscale instead.
-
-> Note: By default Hetzner blocks no ports at the OS level; the cloud firewall sits in front. Only ports 80 and 443 need to be publicly reachable.
 
 ---
 
 ## 2. Connect to the Server
 
-Use Tailscale to SSH in (no public port 22 needed):
+Via Tailscale:
 
 ```bash
 ssh root@<TAILSCALE_IP_OR_HOSTNAME>
+# e.g. ssh root@YOUR_TAILSCALE_IP
 ```
 
 ---
 
-## 3. Install Docker
+## 3. Install Docker (Ubuntu 24.04)
 
 ```bash
-# Install dependencies
-apt-get update
-apt-get install -y ca-certificates curl gnupg
+apt-get update && apt-get install -y ca-certificates curl gnupg
 
-# Add Docker's official GPG key
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
   gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
 
-# Add Docker apt repository
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
   https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-# Install Docker Engine + Compose plugin
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-# Verify
-docker --version
-docker compose version
 ```
 
 ---
 
-## 4. Clone the Repo
+## 4. Clone and Start
 
 ```bash
 cd /root
 git clone <YOUR_REPO_URL> box
 cd box
-```
-
-Or if already there (this repo is at `/root/box`):
-
-```bash
-cd /root/box
-git pull
-```
-
----
-
-## 5. Build and Start
-
-```bash
 docker compose up -d --build
 ```
 
-The first build will take a minute (Bun install + Vite build). After that the site is live at:
+Site is live at `http://<YOUR_SERVER_IP>` (currently `http://YOUR_SERVER_IP`).
 
-```
-http://<YOUR_SERVER_IP>
-```
+For HTTPS with a domain, see [DOMAIN_SETUP.md](./DOMAIN_SETUP.md).
 
 ---
 
-## 6. Optional: Add a Domain + HTTPS
-
-If you have a domain, Caddy can provision a free Let's Encrypt TLS certificate automatically.
-
-1. Point your domain's **A record** to `<YOUR_SERVER_IP>` in your DNS provider.
-
-2. Edit `app/Caddyfile` — replace `:80` with your domain:
-
-   ```caddyfile
-   yourdomain.com {
-       root * /srv
-       encode gzip
-       try_files {path} /index.html
-       file_server
-   }
-   ```
-
-3. Rebuild and restart:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-Caddy will automatically obtain and renew the certificate. Make sure port 80 is open (used for the ACME HTTP-01 challenge).
-
----
-
-## 7. Useful Commands
+## 5. Useful Commands
 
 ```bash
-# View logs
-docker compose logs -f
-
-# Restart without rebuild
-docker compose restart
-
-# Rebuild after code changes
-docker compose up -d --build
-
-# Stop everything
-docker compose down
-
-# Stop and remove volumes (clears Caddy certs)
-docker compose down -v
+docker compose up -d --build   # rebuild after code changes
+docker compose logs -f         # tail logs
+docker compose restart         # restart without rebuild
+docker compose down            # stop
+docker compose down -v         # stop + wipe Caddy cert volumes
 ```
 
 ---
 
-## 8. Auto-start on Reboot
+## 6. Auto-start on Reboot
 
-Docker's `restart: unless-stopped` policy (already set in `docker-compose.yml`) handles this automatically as long as the Docker daemon itself starts on boot, which it does by default after the install above.
-
-To verify:
+`restart: unless-stopped` in `docker-compose.yml` handles this. Docker daemon starts on boot by default. Verify:
 
 ```bash
-systemctl is-enabled docker
-# should output: enabled
+systemctl is-enabled docker   # should say: enabled
 ```
