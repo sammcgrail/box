@@ -1,0 +1,60 @@
+.wonk-scene {
+  perspective: 800px;
+  perspective-origin: center center;
+}
+
+.wonk-text {
+  display: block;
+  font-size: clamp(6rem, 22vw, 18rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+
+  /* 3D rotation */
+  animation: wonk-spin 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  transform-style: preserve-3d;
+  transform-origin: center center;
+
+  /* Word art gradient */
+  background: linear-gradient(
+    135deg,
+    #e879f9 0%,
+    #a855f7 20%,
+    #6366f1 40%,
+    #22d3ee 60%,
+    #a855f7 80%,
+    #e879f9 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: wonk-spin 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
+    wonk-gradient 4s ease infinite;
+
+  /* Glow */
+  filter: drop-shadow(0 0 40px rgba(168, 85, 247, 0.5))
+    drop-shadow(0 0 80px rgba(99, 102, 241, 0.3));
+}
+
+@keyframes wonk-spin {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes wonk-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
