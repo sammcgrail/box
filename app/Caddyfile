@@ -4,8 +4,11 @@
 :80 {
     encode gzip
 
-    # seb status dashboard
+    # seb status dashboard (basic auth protected)
     handle /seb* {
+        basicauth {
+            seb $2a$14$0.SeIVFOQocN6SKk.jVtGeTqh2C1ksc/VEStWdSWCi8IpA71PHMvy
+        }
         reverse_proxy host.docker.internal:8765
     }
 
