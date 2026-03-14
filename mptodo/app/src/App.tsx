@@ -76,7 +76,7 @@ export default function App() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addTodo()}
             placeholder="Add a todo..."
-            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
+            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-base md:text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
           />
           <button
             onClick={addTodo}
