@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
 
 interface Todo {
   id: string;
@@ -8,6 +8,45 @@ interface Todo {
 }
 
 const API = "/mptodo/api";
+
+const TodoItem = memo(function TodoItem({
+  todo,
+  onToggle,
+  onDelete,
+}: {
+  todo: Todo;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <li className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 group hover:border-zinc-700 transition-colors">
+      <button
+        onClick={() => onToggle(todo.id)}
+        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+          todo.done ? "bg-zinc-500 border-zinc-500" : "border-zinc-600 hover:border-zinc-400"
+        }`}
+      >
+        {!!todo.done && (
+          <svg className="w-2.5 h-2.5 text-zinc-950" fill="none" viewBox="0 0 10 10">
+            <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </button>
+      <span className={`flex-1 text-sm select-none ${todo.done ? "line-through text-zinc-600" : "text-zinc-200"}`}>
+        {todo.text}
+      </span>
+      <button
+        onClick={() => onDelete(todo.id)}
+        className="text-zinc-700 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-all p-0.5 flex-shrink-0"
+        aria-label="Delete"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14">
+          <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
+    </li>
+  );
+});
 
 export default function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -44,15 +83,15 @@ export default function App() {
     fetchTodos();
   }
 
-  async function toggleTodo(id: string) {
+  const toggleTodo = useCallback(async (id: string) => {
     await fetch(`${API}/todos/${id}`, { method: "PATCH" });
     fetchTodos();
-  }
+  }, []);
 
-  async function deleteTodo(id: string) {
+  const deleteTodo = useCallback(async (id: string) => {
     await fetch(`${API}/todos/${id}`, { method: "DELETE" });
     fetchTodos();
-  }
+  }, []);
 
   const doneCount = todos.filter((t) => t.done).length;
 
@@ -94,57 +133,7 @@ export default function App() {
         ) : (
           <ul className="flex flex-col gap-1">
             {todos.map((todo) => (
-              <li
-                key={todo.id}
-                className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 group hover:border-zinc-700 transition-colors"
-              >
-                {/* Checkbox */}
-                <button
-                  onClick={() => toggleTodo(todo.id)}
-                  className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                    todo.done
-                      ? "bg-zinc-500 border-zinc-500"
-                      : "border-zinc-600 hover:border-zinc-400"
-                  }`}
-                >
-                  {!!todo.done && (
-                    <svg className="w-2.5 h-2.5 text-zinc-950" fill="none" viewBox="0 0 10 10">
-                      <path
-                        d="M1.5 5l2.5 2.5 4.5-4.5"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                {/* Text */}
-                <span
-                  className={`flex-1 text-sm select-none ${
-                    todo.done ? "line-through text-zinc-600" : "text-zinc-200"
-                  }`}
-                >
-                  {todo.text}
-                </span>
-
-                {/* Delete */}
-                <button
-                  onClick={() => deleteTodo(todo.id)}
-                  className="text-zinc-700 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-all p-0.5 flex-shrink-0"
-                  aria-label="Delete"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14">
-                    <path
-                      d="M2 2l10 10M12 2L2 12"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-              </li>
+              <TodoItem key={todo.id} todo={todo} onToggle={toggleTodo} onDelete={deleteTodo} />
             ))}
           </ul>
         )}
