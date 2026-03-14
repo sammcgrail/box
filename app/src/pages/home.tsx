@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Zap, Shield, Globe } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const features = [
   {
@@ -49,20 +50,17 @@ export function Home() {
           and served through Caddy — ready to deploy to any VPS.
         </p>
         <div className="flex gap-4 flex-wrap justify-center">
-          <Button asChild size="lg">
-            <Link to="/about">
-              Learn more <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button variant="outline" size="lg" asChild>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noreferrer"
-            >
-              View source
-            </a>
-          </Button>
+          <Link to="/about" className={cn(buttonVariants({ size: "lg" }))}>
+            Learn more <ArrowRight className="h-4 w-4" />
+          </Link>
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noreferrer"
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+          >
+            View source
+          </a>
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function NotFound() {
   return (
@@ -9,9 +10,9 @@ export function NotFound() {
       <p className="mt-2 text-muted-foreground">
         The page you&apos;re looking for doesn&apos;t exist.
       </p>
-      <Button asChild className="mt-8">
-        <Link to="/">Go home</Link>
-      </Button>
+      <Link to="/" className={cn(buttonVariants(), "mt-8")}>
+        Go home
+      </Link>
     </div>
   );
 }

@@ -6,28 +6,32 @@ Steps to configure the Hetzner server and deploy this stack from scratch.
 
 ## 1. Hetzner Cloud Console — Firewall
 
+> SSH is managed via **Tailscale** — port 22 does not need to be exposed publicly.
+
 In the [Hetzner Cloud Console](https://console.hetzner.cloud):
 
 1. Go to **Firewalls** → create a new firewall (or edit the one attached to your server).
 2. Add the following **Inbound** rules:
 
-| Protocol | Port    | Source        | Description          |
-|----------|---------|---------------|----------------------|
-| TCP      | 22      | Your IP/0.0.0.0/0 | SSH                |
-| TCP      | 80      | 0.0.0.0/0     | HTTP                 |
-| TCP      | 443     | 0.0.0.0/0     | HTTPS                |
-| UDP      | 443     | 0.0.0.0/0     | HTTP/3 (QUIC)        |
+| Protocol | Port | Source    | Description   |
+|----------|------|-----------|---------------|
+| TCP      | 80   | 0.0.0.0/0 | HTTP          |
+| TCP      | 443  | 0.0.0.0/0 | HTTPS         |
+| UDP      | 443  | 0.0.0.0/0 | HTTP/3 (QUIC) |
 
 3. Attach the firewall to your server.
+4. Make sure port 22 is **not** open — access the server via Tailscale instead.
 
-> Note: By default Hetzner blocks no ports at the OS level, but the cloud firewall sits in front. Make sure ports 80 and 443 are open.
+> Note: By default Hetzner blocks no ports at the OS level; the cloud firewall sits in front. Only ports 80 and 443 need to be publicly reachable.
 
 ---
 
-## 2. SSH into the Server
+## 2. Connect to the Server
+
+Use Tailscale to SSH in (no public port 22 needed):
 
 ```bash
-ssh root@<YOUR_SERVER_IP>
+ssh root@<TAILSCALE_IP_OR_HOSTNAME>
 ```
 
 ---
