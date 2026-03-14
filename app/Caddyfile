@@ -1,10 +1,9 @@
 sebland.com {
     encode gzip
 
-    # scratch metrics dashboard (NO AUTH - public dashboard)
-    handle /scratch* {
-        uri strip_prefix /scratch
-        reverse_proxy host.docker.internal:8766
+    # mptodo — free-for-all todo list
+    handle /mptodo* {
+        reverse_proxy host.docker.internal:8767
     }
 
     # seb status dashboard (basic auth protected)
