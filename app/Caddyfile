@@ -1,20 +1,19 @@
-# Serve on port 80 (HTTP only — works with bare IP)
-# To enable HTTPS with a domain, replace ":80" with "yourdomain.com"
-# and Caddy will automatically provision a Let's Encrypt certificate.
-:80 {
+sebland.com {
     encode gzip
+
+    # scratch metrics dashboard (NO AUTH - public dashboard)
+    handle /scratch* {
+        uri strip_prefix /scratch
+        reverse_proxy host.docker.internal:8766
+    }
 
     # seb status dashboard (basic auth protected)
     handle /seb* {
+        uri strip_prefix /seb
         basicauth {
             seb $2a$14$0.SeIVFOQocN6SKk.jVtGeTqh2C1ksc/VEStWdSWCi8IpA71PHMvy
         }
         reverse_proxy host.docker.internal:8765
-    }
-
-    # scratch metrics dashboard (NO AUTH - public dashboard)
-    handle /scratch* {
-        reverse_proxy host.docker.internal:8766
     }
 
     # SPA — all other paths
