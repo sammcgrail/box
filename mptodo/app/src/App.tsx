@@ -19,11 +19,11 @@ const TodoItem = memo(function TodoItem({
   onDelete: (id: string) => void;
 }) {
   return (
-    <li className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 group hover:border-zinc-700 transition-colors">
+    <li className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 group [@media(hover:hover)]:hover:border-zinc-700 transition-colors">
       <button
         onClick={() => onToggle(todo.id)}
-        className={`w-4 h-4 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-          todo.done ? "bg-zinc-500 border-zinc-500" : "border-zinc-600 hover:border-zinc-400"
+        className={`w-4 h-4 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors touch-manipulation ${
+          todo.done ? "bg-zinc-500 border-zinc-500" : "border-zinc-600 [@media(hover:hover)]:hover:border-zinc-400"
         }`}
       >
         {!!todo.done && (
@@ -37,7 +37,7 @@ const TodoItem = memo(function TodoItem({
       </span>
       <button
         onClick={() => onDelete(todo.id)}
-        className="text-zinc-700 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-all p-0.5 flex-shrink-0 mt-0.5"
+        className="text-zinc-500 [@media(hover:hover)]:text-zinc-700 [@media(hover:hover)]:hover:text-zinc-300 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all p-0.5 flex-shrink-0 mt-0.5 touch-manipulation"
         aria-label="Delete"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14">
@@ -67,7 +67,14 @@ export default function App() {
     const es = new EventSource(`${API}/events`);
     es.onmessage = () => fetchTodos();
     es.onerror = () => {}; // auto-reconnects
-    return () => es.close();
+
+    const onVisible = () => { if (document.visibilityState === "visible") fetchTodos(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      es.close();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   async function addTodo() {
@@ -119,7 +126,7 @@ export default function App() {
           />
           <button
             onClick={addTodo}
-            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-sm font-medium px-4 py-2 rounded-md transition-colors"
+            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-sm font-medium px-4 py-2 rounded-md transition-colors touch-manipulation"
           >
             Add
           </button>
