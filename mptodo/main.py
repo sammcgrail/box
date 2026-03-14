@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sqlite3
 import time
@@ -5,11 +6,19 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 DB = "/data/todos.db"
 STATIC = "/app/static"
+
+# Connected SSE clients (one asyncio.Queue per tab)
+_clients: set[asyncio.Queue] = set()
+
+
+def broadcast():
+    for q in list(_clients):
+        q.put_nowait("reload")
 
 
 def init_db():
@@ -45,6 +54,37 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+# ── SSE ───────────────────────────────────────────────────────────────────────
+
+
+async def _event_stream(queue: asyncio.Queue):
+    try:
+        while True:
+            try:
+                msg = await asyncio.wait_for(queue.get(), timeout=20)
+                yield f"data: {msg}\n\n"
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"  # prevents proxy/browser from closing idle connection
+    except (asyncio.CancelledError, GeneratorExit):
+        pass
+    finally:
+        _clients.discard(queue)
+
+
+@app.get("/mptodo/api/events")
+async def events():
+    queue: asyncio.Queue = asyncio.Queue()
+    _clients.add(queue)
+    return StreamingResponse(
+        _event_stream(queue),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # stop Caddy/nginx buffering the stream
+        },
+    )
+
+
 # ── API ──────────────────────────────────────────────────────────────────────
 
 
@@ -70,6 +110,7 @@ def create_todo(body: TodoCreate):
             "INSERT INTO todos VALUES (?, ?, 0, ?)",
             [todo_id, text, int(time.time() * 1000)],
         )
+    broadcast()
     return {"id": todo_id}
 
 
@@ -80,6 +121,7 @@ def toggle_todo(todo_id: str):
         if not row:
             raise HTTPException(404)
         db.execute("UPDATE todos SET done=? WHERE id=?", [1 - row["done"], todo_id])
+    broadcast()
     return {"ok": True}
 
 
@@ -87,6 +129,7 @@ def toggle_todo(todo_id: str):
 def delete_todo(todo_id: str):
     with get_db() as db:
         db.execute("DELETE FROM todos WHERE id=?", [todo_id])
+    broadcast()
     return {"ok": True}
 
 

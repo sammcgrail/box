@@ -25,6 +25,10 @@ export default function App() {
 
   useEffect(() => {
     fetchTodos();
+    const es = new EventSource(`${API}/events`);
+    es.onmessage = () => fetchTodos();
+    es.onerror = () => {}; // auto-reconnects
+    return () => es.close();
   }, []);
 
   async function addTodo() {
