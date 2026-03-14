@@ -2,16 +2,21 @@
 # To enable HTTPS with a domain, replace ":80" with "yourdomain.com"
 # and Caddy will automatically provision a Let's Encrypt certificate.
 :80 {
-    root * /srv
     encode gzip
 
-    # SPA fallback — send all unmatched paths to index.html for client-side routing
-    try_files {path} /index.html
+    # seb status dashboard
+    handle /seb* {
+        reverse_proxy host.docker.internal:8765
+    }
 
-    file_server
+    # SPA — all other paths
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
 
     header {
-        # Security headers
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"

@@ -11,6 +11,8 @@ services:
     volumes:
       - caddy_data:/data       # Caddy stores ACME certs here
       - caddy_config:/config   # Caddy runtime config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   caddy_data:
