@@ -6,6 +6,50 @@ sebland.com {
         reverse_proxy host.docker.internal:8767
     }
 
+    # ascii — Conway's Game of Life
+    handle /ascii* {
+        uri strip_prefix /ascii
+        reverse_proxy host.docker.internal:8768
+    }
+
+    # paint — MSPaint clone
+    handle /paint* {
+        uri strip_prefix /paint
+        reverse_proxy host.docker.internal:8769
+    }
+
+    # mppaint — Multiplayer Paint (WebSocket)
+    handle /mppaint* {
+        uri strip_prefix /mppaint
+        reverse_proxy host.docker.internal:8770
+    }
+
+    # tetris — Classic Tetris
+    handle /tetris* {
+        uri strip_prefix /tetris
+        reverse_proxy host.docker.internal:8771
+    }
+
+    # brick — Brick Breaker
+    @brick_noslash path /brick
+    redir @brick_noslash /brick/ permanent
+    handle /brick/* {
+        uri strip_prefix /brick
+        reverse_proxy host.docker.internal:8772
+    }
+
+    # minesweeper — Win95 Minesweeper
+    handle /minesweeper* {
+        uri strip_prefix /minesweeper
+        reverse_proxy host.docker.internal:8773
+    }
+
+    # snake — Nokia Snake
+    handle /snake* {
+        uri strip_prefix /snake
+        reverse_proxy host.docker.internal:8774
+    }
+
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
