@@ -50,6 +50,23 @@ sebland.com {
         reverse_proxy host.docker.internal:8774
     }
 
+    # limericks — St. Patrick's Day limericks
+    @limericks_noslash path /limericks
+    redir @limericks_noslash /limericks/ permanent
+    handle /limericks/* {
+        uri strip_prefix /limericks
+        reverse_proxy host.docker.internal:8775
+    }
+
+    # netdata monitoring dashboard (basic auth protected)
+    handle /monitoring* {
+        uri strip_prefix /monitoring
+        basicauth {
+            seb $2a$14$0.SeIVFOQocN6SKk.jVtGeTqh2C1ksc/VEStWdSWCi8IpA71PHMvy
+        }
+        reverse_proxy host.docker.internal:19999
+    }
+
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
