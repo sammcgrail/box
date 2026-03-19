@@ -57,19 +57,25 @@ sebland.com {
     }
 
     # sand — Sand Game (Falling Sand Simulation)
-    handle /sand* {
+    @sand_noslash path /sand
+    redir @sand_noslash /sand/ permanent
+    handle /sand/* {
         uri strip_prefix /sand
         reverse_proxy host.docker.internal:8777
     }
 
     # tower — PixelClash Tower Defense
-    handle /tower* {
+    @tower_noslash path /tower
+    redir @tower_noslash /tower/ permanent
+    handle /tower/* {
         uri strip_prefix /tower
         reverse_proxy host.docker.internal:8778
     }
 
     # chess — 6D Chess
-    handle /chess* {
+    @chess_noslash path /chess
+    redir @chess_noslash /chess/ permanent
+    handle /chess/* {
         uri strip_prefix /chess
         reverse_proxy host.docker.internal:8779
     }
