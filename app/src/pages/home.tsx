@@ -8,6 +8,9 @@ import {
   Blocks,
   Joystick,
   Crosshair,
+  Droplets,
+  Castle,
+  Crown,
 } from "lucide-react";
 
 const apps = [
@@ -73,6 +76,27 @@ const apps = [
     href: "/tank",
     icon: Crosshair,
     color: "#ef4444",
+  },
+  {
+    name: "Sand Game",
+    desc: "Falling sand sim",
+    href: "/sand",
+    icon: Droplets,
+    color: "#f59e0b",
+  },
+  {
+    name: "PixelClash",
+    desc: "Particle tower defense",
+    href: "/tower",
+    icon: Castle,
+    color: "#8b5cf6",
+  },
+  {
+    name: "6D Chess",
+    desc: "Multidimensional chess",
+    href: "/chess",
+    icon: Crown,
+    color: "#e2e8f0",
   },
 ];
 

@@ -56,6 +56,24 @@ sebland.com {
         reverse_proxy host.docker.internal:8776
     }
 
+    # sand — Sand Game (Falling Sand Simulation)
+    handle /sand* {
+        uri strip_prefix /sand
+        reverse_proxy host.docker.internal:8777
+    }
+
+    # tower — PixelClash Tower Defense
+    handle /tower* {
+        uri strip_prefix /tower
+        reverse_proxy host.docker.internal:8778
+    }
+
+    # chess — 6D Chess
+    handle /chess* {
+        uri strip_prefix /chess
+        reverse_proxy host.docker.internal:8779
+    }
+
     # limericks — St. Patrick's Day limericks
     @limericks_noslash path /limericks
     redir @limericks_noslash /limericks/ permanent
