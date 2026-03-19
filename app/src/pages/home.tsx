@@ -71,7 +71,7 @@ const apps = [
 export function Home() {
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-16 min-h-[calc(100vh-8rem)]">
-      <h1 className="text-4xl font-bold tracking-tight mb-2 text-foreground">
+      <h1 className="sebland-title mb-2">
         SEBLAND
       </h1>
       <p className="text-sm text-muted-foreground mb-12">
