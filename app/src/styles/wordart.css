@@ -1,56 +1,91 @@
-.wordart-scene {
-  perspective: 800px;
-  perspective-origin: center center;
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/press-start-2p.woff2') format('woff2');
 }
 
-.wordart-text {
+.sebland-title {
   display: block;
-  font-size: clamp(6rem, 22vw, 18rem);
+  font-size: clamp(2.2rem, 10vw, 4rem);
   font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.08em;
   line-height: 1;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-
-  transform-style: preserve-3d;
-  transform-origin: center center;
+  font-family: 'Press Start 2P', monospace;
+  color: transparent;
 
   background: linear-gradient(
-    135deg,
-    #e879f9 0%,
-    #a855f7 20%,
-    #6366f1 40%,
-    #22d3ee 60%,
-    #a855f7 80%,
-    #e879f9 100%
+    var(--gradient-angle, 90deg),
+    #4ade80,
+    #22d3ee,
+    #a855f7,
+    #f472b6,
+    #facc15,
+    #4ade80
   );
-  background-size: 200% 200%;
+  background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: wordart-spin 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
-    wordart-gradient 4s ease infinite;
 
-  filter: drop-shadow(0 0 40px rgba(168, 85, 247, 0.5))
-    drop-shadow(0 0 80px rgba(99, 102, 241, 0.3));
+  animation:
+    sebland-gradient 8s linear infinite,
+    sebland-angle 12s linear infinite,
+    sebland-glow 3s ease-in-out infinite;
+
+  filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.4));
+  cursor: default;
+  user-select: none;
 }
 
-@keyframes wordart-spin {
-  0% {
-    transform: rotateY(0deg);
-  }
-  100% {
-    transform: rotateY(360deg);
-  }
-}
-
-@keyframes wordart-gradient {
+@keyframes sebland-gradient {
   0% {
     background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+@keyframes sebland-angle {
+  0% {
+    --gradient-angle: 90deg;
+  }
+  25% {
+    --gradient-angle: 135deg;
   }
   50% {
-    background-position: 100% 50%;
+    --gradient-angle: 180deg;
+  }
+  75% {
+    --gradient-angle: 225deg;
   }
   100% {
-    background-position: 0% 50%;
+    --gradient-angle: 450deg;
   }
+}
+
+@keyframes sebland-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.6))
+      drop-shadow(0 0 50px rgba(34, 211, 238, 0.35))
+      drop-shadow(0 0 100px rgba(74, 222, 128, 0.15));
+  }
+  33% {
+    filter: drop-shadow(0 0 30px rgba(168, 85, 247, 0.7))
+      drop-shadow(0 0 70px rgba(244, 114, 182, 0.4))
+      drop-shadow(0 0 120px rgba(168, 85, 247, 0.2));
+  }
+  66% {
+    filter: drop-shadow(0 0 30px rgba(250, 204, 21, 0.7))
+      drop-shadow(0 0 70px rgba(74, 222, 128, 0.4))
+      drop-shadow(0 0 120px rgba(250, 204, 21, 0.2));
+  }
+}
+
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 90deg;
+  inherits: false;
 }
