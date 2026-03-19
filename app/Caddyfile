@@ -140,6 +140,18 @@ sebland.com {
         }
     }
 
+    # cat — Random cats from cataas
+    @cat_noslash path /cat
+    redir @cat_noslash /cat/ permanent
+    handle /cat/* {
+        uri strip_prefix /cat
+        root * /srv/cat
+        try_files {path} /srv/cat/index.html
+        file_server {
+            precompressed gzip
+        }
+    }
+
     # limericks — St. Patrick's Day limericks
     @limericks_noslash path /limericks
     redir @limericks_noslash /limericks/ permanent
