@@ -86,7 +86,7 @@ export function Home() {
         tiny apps, built by robots
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-4xl">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-4xl">
         {apps.map((app) => (
           <a
             key={app.name}
