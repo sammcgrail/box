@@ -50,6 +50,12 @@ sebland.com {
         reverse_proxy host.docker.internal:8774
     }
 
+    # tank — Multiplayer Tank Battle (WebSocket)
+    handle /tank* {
+        uri strip_prefix /tank
+        reverse_proxy host.docker.internal:8776
+    }
+
     # limericks — St. Patrick's Day limericks
     @limericks_noslash path /limericks
     redir @limericks_noslash /limericks/ permanent

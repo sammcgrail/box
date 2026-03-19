@@ -7,6 +7,7 @@ import {
   CheckSquare,
   Blocks,
   Joystick,
+  Crosshair,
 } from "lucide-react";
 
 const apps = [
@@ -65,6 +66,13 @@ const apps = [
     href: "/mptodo",
     icon: CheckSquare,
     color: "#94a3b8",
+  },
+  {
+    name: "Tank Wars",
+    desc: "Multiplayer artillery",
+    href: "/tank",
+    icon: Crosshair,
+    color: "#ef4444",
   },
 ];
 
