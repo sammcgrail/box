@@ -62,4 +62,7 @@ rm -rf "$STATIC_DIR/tetris"
 mkdir -p "$STATIC_DIR/tetris"
 cp /root/tetris/index.html "$STATIC_DIR/tetris/"
 
+# Precompress all text assets with gzip for Caddy's precompressed file_server
+echo "Precompressing assets..."
+find "$STATIC_DIR" -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.wasm' -o -name '*.svg' \) -exec gzip -9 -k -f {} \;
 echo "Done. Now rebuild Caddy: cd /root/box && docker compose up -d --build web"

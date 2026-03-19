@@ -1,5 +1,15 @@
 sebland.com {
-    encode gzip
+    encode zstd gzip
+
+    # === CACHE HEADERS ===
+
+    # Immutable hashed assets (JS/CSS bundles with hash in filename) — cache 1 year
+    @hashed_assets path_regexp \.(js|css|wasm)$
+    header @hashed_assets Cache-Control "public, max-age=31536000, immutable"
+
+    # HTML files — no cache (always revalidate)
+    @html path_regexp \.html$
+    header @html Cache-Control "no-cache"
 
     # === WEBSOCKET / SERVER APPS (reverse proxy) ===
 
@@ -29,7 +39,9 @@ sebland.com {
         uri strip_prefix /ascii
         root * /srv/ascii
         try_files {path} /srv/ascii/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # paint — MSPaint clone
@@ -39,7 +51,9 @@ sebland.com {
         uri strip_prefix /paint
         root * /srv/paint
         try_files {path} /srv/paint/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # tetris — Classic Tetris
@@ -49,7 +63,9 @@ sebland.com {
         uri strip_prefix /tetris
         root * /srv/tetris
         try_files {path} /srv/tetris/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # brick — Brick Breaker
@@ -59,7 +75,9 @@ sebland.com {
         uri strip_prefix /brick
         root * /srv/brick
         try_files {path} /srv/brick/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # minesweeper — Win95 Minesweeper
@@ -69,7 +87,9 @@ sebland.com {
         uri strip_prefix /minesweeper
         root * /srv/minesweeper
         try_files {path} /srv/minesweeper/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # snake — Nokia Snake
@@ -79,7 +99,9 @@ sebland.com {
         uri strip_prefix /snake
         root * /srv/snake
         try_files {path} /srv/snake/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # sand — Sand Game (Falling Sand Simulation)
@@ -89,7 +111,9 @@ sebland.com {
         uri strip_prefix /sand
         root * /srv/sand
         try_files {path} /srv/sand/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # tower — PixelClash Tower Defense
@@ -99,7 +123,9 @@ sebland.com {
         uri strip_prefix /tower
         root * /srv/tower
         try_files {path} /srv/tower/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # chess — 6D Chess
@@ -109,7 +135,9 @@ sebland.com {
         uri strip_prefix /chess
         root * /srv/chess
         try_files {path} /srv/chess/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # limericks — St. Patrick's Day limericks
@@ -119,7 +147,9 @@ sebland.com {
         uri strip_prefix /limericks
         root * /srv/limericks
         try_files {path} /srv/limericks/index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     # === ADMIN DASHBOARDS ===
@@ -146,7 +176,9 @@ sebland.com {
     handle {
         root * /srv
         try_files {path} /index.html
-        file_server
+        file_server {
+            precompressed gzip
+        }
     }
 
     header {
