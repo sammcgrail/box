@@ -152,6 +152,14 @@ sebland.com {
         }
     }
 
+    # radarling — Weather radar globe viewer
+    @radarling_noslash path /radarling
+    redir @radarling_noslash /radarling/ permanent
+    handle /radarling/* {
+        uri strip_prefix /radarling
+        reverse_proxy host.docker.internal:20000
+    }
+
     # limericks — St. Patrick's Day limericks
     @limericks_noslash path /limericks
     redir @limericks_noslash /limericks/ permanent
