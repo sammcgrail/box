@@ -12,6 +12,7 @@ import {
   Droplets,
   Castle,
   Crown,
+  Globe,
 } from "lucide-react";
 
 const apps = [
@@ -98,6 +99,13 @@ const apps = [
     href: "/chess/",
     icon: Crown,
     color: "#e2e8f0",
+  },
+  {
+    name: "Radarling",
+    desc: "Weather radar globe",
+    href: "/radarling/",
+    icon: Globe,
+    color: "#38bdf8",
   },
 ];
 
