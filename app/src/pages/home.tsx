@@ -1,3 +1,4 @@
+import "@/styles/wordart.css";
 import {
   Gamepad2,
   PaintBucket,
