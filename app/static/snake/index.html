@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Snake</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #2b2b2b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#lcd {
+  background: #5a7a1a;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow:
+    0 0 60px rgba(90, 122, 26, 0.4),
+    inset 0 0 30px rgba(0, 0, 0, 0.15);
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+#info {
+  color: #3a5a0a;
+  font-family: monospace;
+  font-size: 11px;
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+/* Mobile D-pad — only visible on touch devices / small screens */
+#dpad {
+  display: none;
+  margin-top: 16px;
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+@media (pointer: coarse), (max-width: 600px) {
+  #dpad { display: block; }
+  body { justify-content: start; padding-top: 4vh; }
+}
+.dpad-btn {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  background: #3a4a2a;
+  border: 2px solid #4a5a3a;
+  border-radius: 10px;
+  color: #8a9a6a;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: background 0.1s;
+}
+.dpad-btn:active {
+  background: #2a3a1a;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  transform: scale(0.95);
+}
+#btn-up    { top: 0; left: 54px; }
+#btn-down  { bottom: 0; left: 54px; }
+#btn-left  { top: 54px; left: 0; }
+#btn-right { top: 54px; right: 0; }
+/* Center circle decoration */
+#dpad-center {
+  position: absolute;
+  top: 54px; left: 54px;
+  width: 52px; height: 52px;
+  background: #2a3a1a;
+  border-radius: 50%;
+  border: 2px solid #3a4a2a;
+}
+</style>
+</head>
+<body>
+<div id="lcd">
+  <canvas id="game"></canvas>
+  <div id="info">SCORE: <span id="sc">0</span></div>
+</div>
+<div id="dpad">
+  <button class="dpad-btn" id="btn-up" data-dir="up">▲</button>
+  <button class="dpad-btn" id="btn-left" data-dir="left">◄</button>
+  <div id="dpad-center"></div>
+  <button class="dpad-btn" id="btn-right" data-dir="right">►</button>
+  <button class="dpad-btn" id="btn-down" data-dir="down">▼</button>
+</div>
+<script>
+(function() {
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scEl = document.getElementById('sc');
+
+  // Nokia 3310 LCD: 84x48 pixels. We render at exact resolution then scale up.
+  // Game grid: each snake cell = 3x3 pixels. Border = 1px.
+  // Play area: 26 cols x 14 rows (78x42 px) + 1px border each side + some margin = 84x48
+  var LCD_W = 84;
+  var LCD_H = 48;
+  var CELL = 3;        // snake cell = 3x3 LCD pixels
+  var BORDER = 1;      // 1px border on each side
+  // Play area starts after border
+  var PLAY_X = 3;      // left margin (border area)
+  var PLAY_Y = 3;      // top margin
+  var COLS = 26;       // play grid columns
+  var ROWS = 14;       // play grid rows
+
+  // Colors — authentic Nokia 3310 LCD
+  var BG = '#9bbc0f';    // LCD "off" — bright green
+  var FG = '#0f380f';    // LCD "on" — very dark green
+  var BG2 = '#8bac0f';   // subtle grid tint
+
+  var dpr, scale;
+
+  function setupCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    // Scale LCD to fit screen — leave room for d-pad on mobile
+    var hasDpad = window.matchMedia('(pointer: coarse), (max-width: 600px)').matches;
+    var maxW = window.innerWidth - 40;
+    var maxH = window.innerHeight - (hasDpad ? 260 : 80);
+    scale = Math.min(Math.floor(maxW / LCD_W), Math.floor(maxH / LCD_H));
+    scale = Math.max(scale, 3);
+    canvas.style.width = (LCD_W * scale) + 'px';
+    canvas.style.height = (LCD_H * scale) + 'px';
+    canvas.width = LCD_W * scale * dpr;
+    canvas.height = LCD_H * scale * dpr;
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    // Disable smoothing for crisp pixels
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  // Pixel buffer — we draw into an 84x48 array then render
+  var pixels = [];
+  function clearPixels() {
+    pixels = [];
+    for (var y = 0; y < LCD_H; y++) {
+      pixels[y] = [];
+      for (var x = 0; x < LCD_W; x++) {
+        pixels[y][x] = 0;
+      }
+    }
+  }
+
+  function setPixel(x, y) {
+    if (x >= 0 && x < LCD_W && y >= 0 && y < LCD_H) pixels[y][x] = 1;
+  }
+
+  function renderPixels() {
+    for (var y = 0; y < LCD_H; y++) {
+      for (var x = 0; x < LCD_W; x++) {
+        ctx.fillStyle = pixels[y][x] ? FG : BG;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  // Draw border — dashed line around play area
+  function drawBorder() {
+    // Top border
+    for (var x = 1; x < LCD_W - 1; x++) {
+      if (x % 2 === 0) setPixel(x, 1);
+    }
+    // Bottom border
+    for (var x = 1; x < LCD_W - 1; x++) {
+      if (x % 2 === 0) setPixel(x, LCD_H - 2);
+    }
+    // Left border
+    for (var y = 1; y < LCD_H - 1; y++) {
+      if (y % 2 === 0) setPixel(1, y);
+    }
+    // Right border
+    for (var y = 1; y < LCD_H - 1; y++) {
+      if (y % 2 === 0) setPixel(LCD_W - 2, y);
+    }
+  }
+
+  // Draw a snake cell at grid position
+  function drawSnakeCell(gx, gy) {
+    var px = PLAY_X + gx * CELL;
+    var py = PLAY_Y + gy * CELL;
+    for (var dy = 0; dy < CELL; dy++) {
+      for (var dx = 0; dx < CELL; dx++) {
+        setPixel(px + dx, py + dy);
+      }
+    }
+  }
+
+  // Fill between adjacent snake cells for connected look
+  function drawSnakeConnection(seg, next) {
+    var dx = next.x - seg.x;
+    var dy = next.y - seg.y;
+    // Handle wrapping — if distance > 1, they wrapped, don't connect
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return;
+    // The cells are already 3x3 and adjacent, so they connect naturally
+    // But we want them to look like one continuous body
+  }
+
+  // Draw food — small cross/plus shape
+  function drawFood(gx, gy) {
+    var px = PLAY_X + gx * CELL;
+    var py = PLAY_Y + gy * CELL;
+    // Cross pattern centered in 3x3 cell
+    setPixel(px + 1, py);     // top
+    setPixel(px, py + 1);     // left
+    setPixel(px + 1, py + 1); // center
+    setPixel(px + 2, py + 1); // right
+    setPixel(px + 1, py + 2); // bottom
+  }
+
+  // Bitmap font — 3x5 pixel characters
+  var FONT = {
+    'S':[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+    'N':[[1,0,1],[1,1,1],[1,1,1],[1,0,1],[1,0,1]],
+    'A':[[0,1,0],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+    'K':[[1,0,1],[1,1,0],[1,0,0],[1,1,0],[1,0,1]],
+    'E':[[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,1,1]],
+    'G':[[1,1,1],[1,0,0],[1,0,1],[1,0,1],[1,1,1]],
+    'M':[[1,0,1],[1,1,1],[1,1,1],[1,0,1],[1,0,1]],
+    'O':[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+    'V':[[1,0,1],[1,0,1],[1,0,1],[0,1,0],[0,1,0]],
+    'R':[[1,1,0],[1,0,1],[1,1,0],[1,0,1],[1,0,1]],
+    'P':[[1,1,1],[1,0,1],[1,1,1],[1,0,0],[1,0,0]],
+    'L':[[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+    'Y':[[1,0,1],[1,0,1],[0,1,0],[0,1,0],[0,1,0]],
+    'I':[[1,1,1],[0,1,0],[0,1,0],[0,1,0],[1,1,1]],
+    'W':[[1,0,1],[1,0,1],[1,1,1],[1,1,1],[1,0,1]],
+    'T':[[1,1,1],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
+    'H':[[1,0,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+    'D':[[1,1,0],[1,0,1],[1,0,1],[1,0,1],[1,1,0]],
+    'C':[[1,1,1],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+    'U':[[1,0,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+    'B':[[1,1,0],[1,0,1],[1,1,0],[1,0,1],[1,1,0]],
+    'F':[[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,0,0]],
+    'X':[[1,0,1],[1,0,1],[0,1,0],[1,0,1],[1,0,1]],
+    ' ':[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+    '0':[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+    '1':[[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
+    '2':[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+    '3':[[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    '4':[[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+    '5':[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+    '6':[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+    '7':[[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
+    '8':[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+    '9':[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    ':':[[0],[1],[0],[1],[0]],
+  };
+
+  function drawText(str, sx, sy) {
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i].toUpperCase();
+      var g = FONT[ch];
+      if (!g) continue;
+      var w = g[0].length;
+      for (var r = 0; r < 5; r++) {
+        for (var c = 0; c < w; c++) {
+          if (g[r][c]) setPixel(sx + c, sy + r);
+        }
+      }
+      sx += w + 1;
+    }
+  }
+
+  function textWidth(str) {
+    var w = 0;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i].toUpperCase();
+      var g = FONT[ch];
+      w += (g ? g[0].length : 3) + 1;
+    }
+    return w - 1;
+  }
+
+  // Game state
+  var snake, dir, inputQueue, food, score, hiScore, state, speed, moveTimer, lastTime;
+
+  hiScore = parseInt(localStorage.getItem('nokia-snake-hi') || '0');
+
+  function init() {
+    var mx = Math.floor(COLS / 2);
+    var my = Math.floor(ROWS / 2);
+    snake = [
+      {x:mx, y:my}, {x:mx-1, y:my}, {x:mx-2, y:my}, {x:mx-3, y:my}, {x:mx-4, y:my}
+    ];
+    dir = {x:1, y:0};
+    inputQueue = [];
+    score = 0;
+    state = 'title';
+    speed = 140;
+    moveTimer = 0;
+    lastTime = 0;
+    placeFood();
+    scEl.textContent = '0';
+  }
+
+  function placeFood() {
+    var pos;
+    do {
+      pos = {x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS)};
+    } while (snake.some(function(s) { return s.x === pos.x && s.y === pos.y; }));
+    food = pos;
+  }
+
+  function setDir(dx, dy) {
+    // Use the effective direction (last queued or current) for reverse check
+    var effective = inputQueue.length > 0 ? inputQueue[inputQueue.length - 1] : dir;
+    if (effective.x === -dx && effective.y === -dy) return;
+    if (effective.x === dx && effective.y === dy) return;
+    if (inputQueue.length < 3) inputQueue.push({x: dx, y: dy});
+    if (state === 'title') state = 'playing';
+  }
+
+  function step() {
+    if (inputQueue.length > 0) dir = inputQueue.shift();
+    var head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    // Wall collision (border mode like in the screenshot)
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+      state = 'dead';
+      return;
+    }
+
+    // Self collision
+    for (var i = 0; i < snake.length; i++) {
+      if (snake[i].x === head.x && snake[i].y === head.y) {
+        state = 'dead';
+        return;
+      }
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score += 10;
+      if (score > hiScore) {
+        hiScore = score;
+        localStorage.setItem('nokia-snake-hi', '' + hiScore);
+      }
+      scEl.textContent = '' + score;
+      placeFood();
+      speed = Math.max(65, 140 - Math.floor(score / 30) * 5);
+    } else {
+      snake.pop();
+    }
+  }
+
+  function draw() {
+    clearPixels();
+
+    if (state === 'title') {
+      drawBorder();
+      // Title
+      var tw = textWidth('SNAKE');
+      drawText('SNAKE', Math.floor((LCD_W - tw) / 2), 10);
+      // Subtitle
+      var sw = textWidth('PRESS START');
+      drawText('PRESS START', Math.floor((LCD_W - sw) / 2), 22);
+      // High score
+      var hw = textWidth('HI ' + hiScore);
+      drawText('HI ' + hiScore, Math.floor((LCD_W - hw) / 2), 34);
+      // Small snake decoration
+      for (var i = 0; i < 6; i++) {
+        var bx = 30 + i * 4;
+        setPixel(bx, 42); setPixel(bx+1, 42); setPixel(bx+2, 42);
+        setPixel(bx, 43); setPixel(bx+1, 43); setPixel(bx+2, 43);
+        setPixel(bx, 44); setPixel(bx+1, 44); setPixel(bx+2, 44);
+      }
+      renderPixels();
+      return;
+    }
+
+    // Draw border
+    drawBorder();
+
+    // Draw food
+    drawFood(food.x, food.y);
+
+    // Draw snake — solid filled blocks
+    for (var i = 0; i < snake.length; i++) {
+      drawSnakeCell(snake[i].x, snake[i].y);
+    }
+
+    // Game over
+    if (state === 'dead') {
+      // Clear center area for text
+      var cx = 12, cy = 14, cw = 60, ch = 20;
+      for (var y = cy; y < cy + ch; y++) {
+        for (var x = cx; x < cx + cw; x++) {
+          if (x >= 0 && x < LCD_W && y >= 0 && y < LCD_H) pixels[y][x] = 0;
+        }
+      }
+      // Border around text box
+      for (var x = cx; x < cx + cw; x++) { setPixel(x, cy); setPixel(x, cy + ch - 1); }
+      for (var y = cy; y < cy + ch; y++) { setPixel(cx, y); setPixel(cx + cw - 1, y); }
+
+      var gw = textWidth('GAME OVER');
+      drawText('GAME OVER', Math.floor((LCD_W - gw) / 2), cy + 3);
+      var sw2 = textWidth('SCORE ' + score);
+      drawText('SCORE ' + score, Math.floor((LCD_W - sw2) / 2), cy + 11);
+    }
+
+    renderPixels();
+  }
+
+  function loop(ts) {
+    if (!lastTime) lastTime = ts;
+    var dt = ts - lastTime;
+    lastTime = ts;
+
+    if (state === 'playing') {
+      moveTimer += dt;
+      if (moveTimer >= speed) {
+        moveTimer -= speed;
+        step();
+      }
+    }
+
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', function(e) {
+    if (state === 'dead') { init(); return; }
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+        e.preventDefault(); setDir(0, -1); break;
+      case 'ArrowDown': case 's': case 'S':
+        e.preventDefault(); setDir(0, 1); break;
+      case 'ArrowLeft': case 'a': case 'A':
+        e.preventDefault(); setDir(-1, 0); break;
+      case 'ArrowRight': case 'd': case 'D':
+        e.preventDefault(); setDir(1, 0); break;
+    }
+  });
+
+  // Touch swipe
+  var tx, ty;
+  document.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (state === 'dead') { init(); return; }
+    if (state === 'title') { state = 'playing'; return; }
+    var t = e.touches[0];
+    tx = t.clientX; ty = t.clientY;
+  }, {passive: false});
+
+  document.addEventListener('touchmove', function(e) { e.preventDefault(); }, {passive: false});
+
+  document.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    if (tx === undefined) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - tx;
+    var dy = t.clientY - ty;
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDir(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDir(0, dy > 0 ? 1 : -1);
+    }
+  }, {passive: false});
+
+  // D-pad buttons (mobile)
+  var dpadBtns = document.querySelectorAll('.dpad-btn');
+  for (var b = 0; b < dpadBtns.length; b++) {
+    (function(btn) {
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (state === 'dead') { init(); return; }
+        if (state === 'title') state = 'playing';
+        switch (btn.dataset.dir) {
+          case 'up': setDir(0, -1); break;
+          case 'down': setDir(0, 1); break;
+          case 'left': setDir(-1, 0); break;
+          case 'right': setDir(1, 0); break;
+        }
+      }, {passive: false});
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (state === 'dead') { init(); return; }
+        if (state === 'title') state = 'playing';
+        switch (btn.dataset.dir) {
+          case 'up': setDir(0, -1); break;
+          case 'down': setDir(0, 1); break;
+          case 'left': setDir(-1, 0); break;
+          case 'right': setDir(1, 0); break;
+        }
+      });
+    })(dpadBtns[b]);
+  }
+
+  // Click
+  canvas.addEventListener('click', function() {
+    if (state === 'dead') init();
+    else if (state === 'title') state = 'playing';
+  });
+
+  window.addEventListener('resize', setupCanvas);
+
+  setupCanvas();
+  init();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

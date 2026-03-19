@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Conway's Game of Life — ASCII</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #00ff41;
+    font-family: 'Courier New', Courier, monospace;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  #controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #111;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+    z-index: 10;
+    flex-wrap: wrap;
+  }
+
+  #controls button {
+    background: #1a1a1a;
+    color: #00ff41;
+    border: 1px solid #333;
+    padding: 6px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  #controls button:hover {
+    background: #2a2a2a;
+  }
+
+  #controls button.active {
+    background: #00ff41;
+    color: #0a0a0a;
+  }
+
+  #controls label {
+    font-size: 13px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #controls input[type="range"] {
+    width: 80px;
+    accent-color: #00ff41;
+  }
+
+  #controls .info {
+    font-size: 11px;
+    color: #555;
+    margin-left: auto;
+  }
+
+  @media (max-width: 500px) {
+    #controls { gap: 6px; padding: 6px 8px; }
+    #controls button { padding: 8px 10px; font-size: 12px; }
+    #controls label { font-size: 11px; }
+    #controls .info { width: 100%; margin-left: 0; font-size: 10px; }
+  }
+
+  #grid-container {
+    flex: 1;
+    overflow: hidden;
+    cursor: crosshair;
+    position: relative;
+  }
+
+  #grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    line-height: 1;
+    white-space: pre;
+    letter-spacing: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #grid canvas {
+    image-rendering: pixelated;
+  }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <button id="btn-play" class="active" title="Play/Pause (Space)">⏸ Pause</button>
+  <button id="btn-step" title="Step forward one generation (S)">Step</button>
+  <button id="btn-clear" title="Clear the grid (C)">Clear</button>
+  <button id="btn-random" title="Randomize grid (R)">Random</button>
+  <label>Speed: <input type="range" id="speed" min="1" max="60" value="15"></label>
+  <label id="speed-label">15 gen/s</label>
+  <div class="info">
+    <span id="gen-counter">Gen: 0</span> &nbsp;|&nbsp;
+    <span id="pop-counter">Pop: 0</span> &nbsp;|&nbsp;
+    <span id="grid-size"></span>
+  </div>
+</div>
+
+<div id="grid-container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<script>
+(function() {
+  // --- Configuration ---
+  const CELL_SIZE = 12; // pixels per cell on canvas
+  const ALIVE_CHAR = '█';
+  const DEAD_CHAR = ' ';
+
+  // --- State ---
+  let cols, rows;
+  let grid, nextGrid;
+  let running = true;
+  let generation = 0;
+  let speed = 15; // generations per second
+  let lastFrame = 0;
+  let mouseDown = false;
+  let paintValue = 1; // 1 = draw alive, 0 = erase
+  let lastPaintedCell = null;
+
+  // --- DOM ---
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const container = document.getElementById('grid-container');
+  const btnPlay = document.getElementById('btn-play');
+  const btnStep = document.getElementById('btn-step');
+  const btnClear = document.getElementById('btn-clear');
+  const btnRandom = document.getElementById('btn-random');
+  const speedSlider = document.getElementById('speed');
+  const speedLabel = document.getElementById('speed-label');
+  const genCounter = document.getElementById('gen-counter');
+  const popCounter = document.getElementById('pop-counter');
+  const gridSizeEl = document.getElementById('grid-size');
+
+  // --- Grid Setup ---
+  function calcSize() {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    cols = Math.floor(w / CELL_SIZE);
+    rows = Math.floor(h / CELL_SIZE);
+    canvas.width = cols * CELL_SIZE;
+    canvas.height = rows * CELL_SIZE;
+    canvas.style.width = canvas.width + 'px';
+    canvas.style.height = canvas.height + 'px';
+    gridSizeEl.textContent = cols + '×' + rows;
+  }
+
+  function makeGrid() {
+    return new Uint8Array(cols * rows);
+  }
+
+  function idx(x, y) {
+    return y * cols + x;
+  }
+
+  function initGrid() {
+    calcSize();
+    grid = makeGrid();
+    nextGrid = makeGrid();
+    generation = 0;
+    randomize();
+  }
+
+  function randomize() {
+    for (let i = 0; i < grid.length; i++) {
+      grid[i] = Math.random() < 0.3 ? 1 : 0;
+    }
+    generation = 0;
+  }
+
+  function clear() {
+    grid.fill(0);
+    generation = 0;
+  }
+
+  // --- Simulation ---
+  function step() {
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        let neighbors = 0;
+
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = (x + dx + cols) % cols;
+            const ny = (y + dy + rows) % rows;
+            neighbors += grid[idx(nx, ny)];
+          }
+        }
+
+        const i = idx(x, y);
+        const alive = grid[i];
+
+        if (alive) {
+          nextGrid[i] = (neighbors === 2 || neighbors === 3) ? 1 : 0;
+        } else {
+          nextGrid[i] = (neighbors === 3) ? 1 : 0;
+        }
+      }
+    }
+
+    // Swap
+    const tmp = grid;
+    grid = nextGrid;
+    nextGrid = tmp;
+    generation++;
+  }
+
+  // --- Rendering ---
+  function render() {
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#00ff41';
+    let population = 0;
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (grid[idx(x, y)]) {
+          population++;
+          ctx.fillRect(
+            x * CELL_SIZE + 1,
+            y * CELL_SIZE + 1,
+            CELL_SIZE - 2,
+            CELL_SIZE - 2
+          );
+        }
+      }
+    }
+
+    // Draw grid lines (subtle)
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= cols; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * CELL_SIZE, 0);
+      ctx.lineTo(x * CELL_SIZE, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= rows; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * CELL_SIZE);
+      ctx.lineTo(canvas.width, y * CELL_SIZE);
+      ctx.stroke();
+    }
+
+    genCounter.textContent = 'Gen: ' + generation;
+    popCounter.textContent = 'Pop: ' + population;
+  }
+
+  // --- Main Loop ---
+  function loop(timestamp) {
+    if (running) {
+      const interval = 1000 / speed;
+      if (timestamp - lastFrame >= interval) {
+        step();
+        lastFrame = timestamp;
+      }
+    }
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // --- Mouse Interaction ---
+  function getCellFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    if (x >= 0 && x < cols && y >= 0 && y < rows) {
+      return { x, y };
+    }
+    return null;
+  }
+
+  canvas.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    mouseDown = true;
+    const cell = getCellFromEvent(e);
+    if (cell) {
+      // Toggle: if cell is alive, we erase; if dead, we draw
+      paintValue = grid[idx(cell.x, cell.y)] ? 0 : 1;
+      grid[idx(cell.x, cell.y)] = paintValue;
+      lastPaintedCell = cell.x + ',' + cell.y;
+      render();
+    }
+  });
+
+  canvas.addEventListener('mousemove', function(e) {
+    if (!mouseDown) return;
+    const cell = getCellFromEvent(e);
+    if (cell) {
+      const key = cell.x + ',' + cell.y;
+      if (key !== lastPaintedCell) {
+        grid[idx(cell.x, cell.y)] = paintValue;
+        lastPaintedCell = key;
+        render();
+      }
+    }
+  });
+
+  window.addEventListener('mouseup', function() {
+    mouseDown = false;
+    lastPaintedCell = null;
+  });
+
+  // --- Touch support ---
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const cell = getCellFromEvent(touch);
+    if (cell) {
+      paintValue = grid[idx(cell.x, cell.y)] ? 0 : 1;
+      grid[idx(cell.x, cell.y)] = paintValue;
+      lastPaintedCell = cell.x + ',' + cell.y;
+      render();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const cell = getCellFromEvent(touch);
+    if (cell) {
+      const key = cell.x + ',' + cell.y;
+      if (key !== lastPaintedCell) {
+        grid[idx(cell.x, cell.y)] = paintValue;
+        lastPaintedCell = key;
+        render();
+      }
+    }
+  }, { passive: false });
+
+  // --- Controls ---
+  btnPlay.addEventListener('click', function() {
+    running = !running;
+    btnPlay.textContent = running ? '⏸ Pause' : '▶ Play';
+    btnPlay.classList.toggle('active', running);
+  });
+
+  btnStep.addEventListener('click', function() {
+    running = false;
+    btnPlay.textContent = '▶ Play';
+    btnPlay.classList.remove('active');
+    step();
+    render();
+  });
+
+  btnClear.addEventListener('click', function() {
+    clear();
+    render();
+  });
+
+  btnRandom.addEventListener('click', function() {
+    randomize();
+    render();
+  });
+
+  speedSlider.addEventListener('input', function() {
+    speed = parseInt(this.value);
+    speedLabel.textContent = speed + ' gen/s';
+  });
+
+  // --- Keyboard Shortcuts ---
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    switch(e.key.toLowerCase()) {
+      case ' ':
+        e.preventDefault();
+        btnPlay.click();
+        break;
+      case 's':
+        btnStep.click();
+        break;
+      case 'c':
+        btnClear.click();
+        break;
+      case 'r':
+        btnRandom.click();
+        break;
+    }
+  });
+
+  // --- Resize ---
+  window.addEventListener('resize', function() {
+    const oldGrid = grid;
+    const oldCols = cols;
+    const oldRows = rows;
+    calcSize();
+    grid = makeGrid();
+    nextGrid = makeGrid();
+    // Copy old data
+    const minCols = Math.min(oldCols, cols);
+    const minRows = Math.min(oldRows, rows);
+    for (let y = 0; y < minRows; y++) {
+      for (let x = 0; x < minCols; x++) {
+        grid[idx(x, y)] = oldGrid[y * oldCols + x];
+      }
+    }
+  });
+
+  // --- Init ---
+  initGrid();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

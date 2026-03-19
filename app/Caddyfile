@@ -1,21 +1,11 @@
 sebland.com {
     encode gzip
 
+    # === WEBSOCKET / SERVER APPS (reverse proxy) ===
+
     # mptodo — free-for-all todo list
     handle /mptodo* {
         reverse_proxy host.docker.internal:8767
-    }
-
-    # ascii — Conway's Game of Life
-    handle /ascii* {
-        uri strip_prefix /ascii
-        reverse_proxy host.docker.internal:8768
-    }
-
-    # paint — MSPaint clone
-    handle /paint* {
-        uri strip_prefix /paint
-        reverse_proxy host.docker.internal:8769
     }
 
     # mppaint — Multiplayer Paint (WebSocket)
@@ -24,10 +14,42 @@ sebland.com {
         reverse_proxy host.docker.internal:8770
     }
 
+    # tank — Multiplayer Tank Battle (WebSocket)
+    handle /tank* {
+        uri strip_prefix /tank
+        reverse_proxy host.docker.internal:8776
+    }
+
+    # === STATIC APPS (served directly by Caddy) ===
+
+    # ascii — Conway's Game of Life
+    @ascii_noslash path /ascii
+    redir @ascii_noslash /ascii/ permanent
+    handle /ascii/* {
+        uri strip_prefix /ascii
+        root * /srv/ascii
+        try_files {path} /srv/ascii/index.html
+        file_server
+    }
+
+    # paint — MSPaint clone
+    @paint_noslash path /paint
+    redir @paint_noslash /paint/ permanent
+    handle /paint/* {
+        uri strip_prefix /paint
+        root * /srv/paint
+        try_files {path} /srv/paint/index.html
+        file_server
+    }
+
     # tetris — Classic Tetris
-    handle /tetris* {
+    @tetris_noslash path /tetris
+    redir @tetris_noslash /tetris/ permanent
+    handle /tetris/* {
         uri strip_prefix /tetris
-        reverse_proxy host.docker.internal:8771
+        root * /srv/tetris
+        try_files {path} /srv/tetris/index.html
+        file_server
     }
 
     # brick — Brick Breaker
@@ -35,25 +57,29 @@ sebland.com {
     redir @brick_noslash /brick/ permanent
     handle /brick/* {
         uri strip_prefix /brick
-        reverse_proxy host.docker.internal:8772
+        root * /srv/brick
+        try_files {path} /srv/brick/index.html
+        file_server
     }
 
     # minesweeper — Win95 Minesweeper
-    handle /minesweeper* {
+    @minesweeper_noslash path /minesweeper
+    redir @minesweeper_noslash /minesweeper/ permanent
+    handle /minesweeper/* {
         uri strip_prefix /minesweeper
-        reverse_proxy host.docker.internal:8773
+        root * /srv/minesweeper
+        try_files {path} /srv/minesweeper/index.html
+        file_server
     }
 
     # snake — Nokia Snake
-    handle /snake* {
+    @snake_noslash path /snake
+    redir @snake_noslash /snake/ permanent
+    handle /snake/* {
         uri strip_prefix /snake
-        reverse_proxy host.docker.internal:8774
-    }
-
-    # tank — Multiplayer Tank Battle (WebSocket)
-    handle /tank* {
-        uri strip_prefix /tank
-        reverse_proxy host.docker.internal:8776
+        root * /srv/snake
+        try_files {path} /srv/snake/index.html
+        file_server
     }
 
     # sand — Sand Game (Falling Sand Simulation)
@@ -61,7 +87,9 @@ sebland.com {
     redir @sand_noslash /sand/ permanent
     handle /sand/* {
         uri strip_prefix /sand
-        reverse_proxy host.docker.internal:8777
+        root * /srv/sand
+        try_files {path} /srv/sand/index.html
+        file_server
     }
 
     # tower — PixelClash Tower Defense
@@ -69,7 +97,9 @@ sebland.com {
     redir @tower_noslash /tower/ permanent
     handle /tower/* {
         uri strip_prefix /tower
-        reverse_proxy host.docker.internal:8778
+        root * /srv/tower
+        try_files {path} /srv/tower/index.html
+        file_server
     }
 
     # chess — 6D Chess
@@ -77,7 +107,9 @@ sebland.com {
     redir @chess_noslash /chess/ permanent
     handle /chess/* {
         uri strip_prefix /chess
-        reverse_proxy host.docker.internal:8779
+        root * /srv/chess
+        try_files {path} /srv/chess/index.html
+        file_server
     }
 
     # limericks — St. Patrick's Day limericks
@@ -85,8 +117,12 @@ sebland.com {
     redir @limericks_noslash /limericks/ permanent
     handle /limericks/* {
         uri strip_prefix /limericks
-        reverse_proxy host.docker.internal:8775
+        root * /srv/limericks
+        try_files {path} /srv/limericks/index.html
+        file_server
     }
+
+    # === ADMIN DASHBOARDS ===
 
     # netdata monitoring dashboard (basic auth protected)
     handle /monitoring* {

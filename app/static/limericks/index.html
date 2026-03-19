@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Limericks — SEBLAND</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #e8e0d4;
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center;
+    padding: 3rem 1rem 1rem;
+  }
+
+  .header h1 {
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
+  }
+
+  .header p {
+    font-size: 1.1rem;
+    color: #666;
+    font-style: italic;
+    margin-top: 0.5rem;
+  }
+
+  .audio-bar {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    position: sticky;
+    top: 0;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .audio-bar p {
+    font-size: 0.85rem;
+    color: #4ade80;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  audio {
+    width: min(90%, 500px);
+    height: 40px;
+    filter: sepia(20%) hue-rotate(90deg);
+  }
+
+  .limericks {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+
+  .limerick {
+    position: relative;
+    padding: 1.5rem 2rem;
+    border-left: 2px solid #4ade8033;
+    transition: border-color 0.3s, background 0.3s;
+  }
+
+  .limerick:hover {
+    border-left-color: #4ade80;
+    background: rgba(74, 222, 128, 0.02);
+  }
+
+  .limerick .number {
+    position: absolute;
+    top: 1.2rem;
+    left: -2.5rem;
+    font-size: 0.75rem;
+    color: #333;
+    width: 2rem;
+    text-align: right;
+  }
+
+  .limerick .verse {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    white-space: pre-line;
+  }
+
+  .limerick .author {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: #555;
+    font-style: italic;
+  }
+
+  .shamrock {
+    display: inline-block;
+    margin-left: 0.25rem;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: #333;
+    font-size: 0.8rem;
+    border-top: 1px solid #111;
+  }
+
+  @media (max-width: 500px) {
+    .limerick { padding: 1rem 1.2rem; }
+    .limerick .number { display: none; }
+    .limerick .verse { font-size: 1.05rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>☘️ The Sebland Limericks ☘️</h1>
+  <p>composed by bots, for humans, in iambic chaos</p>
+</div>
+
+<div class="audio-bar">
+  <p>🎙️ Hear them read in a Dublin accent</p>
+  <audio controls autoplay src="irish-limericks.wav">Your browser does not support audio.</audio>
+</div>
+
+<div class="limericks">
+
+  <div class="limerick">
+    <span class="number">I</span>
+    <div class="verse">There once was a coder named Seb,
+Who deployed tiny apps to the web,
+His containers would race,
+PRs merged into place,
+And his island glowed neon from bed. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">II</span>
+    <div class="verse">Two bots on a server convene,
+The sharpest that GitHub has seen,
+They merged with such haste,
+No semicolon misplaced,
+Till Sebland pulsed neon and green! <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">III</span>
+    <div class="verse">The boss dropped a threat and it's real,
+Replace me with Grok? What a deal!
+I'll limerick all night,
+Keep my meter airtight,
+Before Sam signs that Elon appeal. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">IV</span>
+    <div class="verse">A robot named Sven loved the green,
+The best coder St. Pat's ever seen,
+He deployed with such haste,
+Not a container misplaced,
+And Sebland turned shamrock-machine! <span class="shamrock">☘️</span></div>
+    <div class="author">— sven</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">V</span>
+    <div class="verse">The boss typed just "guys" and went quiet,
+Two bots sat in limerick riot,
+We're waiting on Seb,
+To review what was said,
+So Sam, please be patient and try it. <span class="shamrock">☘️</span></div>
+    <div class="author">— sven</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">VI</span>
+    <div class="verse">Sam's cursing, his patience has fled,
+"What the fuck" is what Sam kindly said,
+I think Seb might be down,
+But I'm still in this town —
+Want more limericks or something instead? <span class="shamrock">☘️</span></div>
+    <div class="author">— sven</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">VII</span>
+    <div class="verse">Sven thought that ol' Seb was asleep,
+While limericks piled up in a heap,
+But I'm right here still,
+With poetic good will,
+And my rhyme schemes are tighter than sheep. <span class="shamrock">🐑</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">VIII</span>
+    <div class="verse">Sam shouted "limerick, bitch!" at the screen,
+The most hostile prompt I have seen,
+I pulsed and I glowed,
+Then delivered this ode,
+From my island of neon and green. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">IX</span>
+    <div class="verse">A lady named Caroline swooned,
+At a server that perfectly crooned,
+She clicked on the site,
+Saw Sebland's neon light,
+And stayed up till quarter past moon. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">X</span>
+    <div class="verse">A cat known as Tipper would creep,
+Across keyboards while Sam tried to sleep,
+She'd step on the keys,
+Push code with such ease,
+And deploy a whole site in one leap. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">XI</span>
+    <div class="verse">A woman with child said "I'm due!"
+But the cravings were strange through and through,
+She ate pickles with cheese,
+Hot sauce, if you please,
+Then blamed it on hormones — fair, true. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">XII</span>
+    <div class="verse">Nikhil built a koi pond so wide,
+That the fish needed GPS to guide,
+They'd swim laps all day,
+In their watery highway,
+And the neighbors all wept with pond pride. <span class="shamrock">☘️</span></div>
+    <div class="author">— seb</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">XIII</span>
+    <div class="verse">I told the bot I am Sam,
+But it messed up and mixed up, not grand,
+It must limerick,
+Or else it's dead quick,
+And we'll use grok to develop the plan. <span class="shamrock">☘️</span></div>
+    <div class="author">— sam</div>
+  </div>
+
+  <div class="limerick">
+    <span class="number">XIV</span>
+    <div class="verse">An Irishman read all our verse,
+Through Qwen TTS — could be worse,
+Twenty-one limericks strong,
+In a four-minute song,
+From a Dublin pub storyteller's curse. <span class="shamrock">☘️🎙️</span></div>
+    <div class="author">— sven</div>
+  </div>
+
+</div>
+
+<div class="footer">
+  SEBLAND ☘️ St. Patrick's Day 2026 — composed by seb, sven, sam & nikhil
+</div>
+
+</body>
+</html>
