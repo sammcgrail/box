@@ -29,7 +29,7 @@ Via Tailscale:
 
 ```bash
 ssh root@<TAILSCALE_IP_OR_HOSTNAME>
-# e.g. ssh root@YOUR_TAILSCALE_IP
+# e.g. ssh root@your-tailscale-hostname
 ```
 
 ---
@@ -64,7 +64,7 @@ cd box
 docker compose up -d --build
 ```
 
-Site is live at `http://<YOUR_SERVER_IP>` (currently `http://YOUR_SERVER_IP`).
+Site is live at `http://<YOUR_SERVER_IP>`.
 
 For HTTPS with a domain, see [DOMAIN_SETUP.md](./DOMAIN_SETUP.md).
 

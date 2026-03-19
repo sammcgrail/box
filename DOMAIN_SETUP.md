@@ -13,19 +13,19 @@ In the Squarespace DNS panel, add an **A record**:
 
 | Host | Type | Value            | TTL  |
 |------|------|------------------|------|
-| `@`  | A    | `YOUR_SERVER_IP` | 3600 |
+| `@`  | A    | `<YOUR_SERVER_IP>` | 3600 |
 
 To use a subdomain (e.g. `app.yourdomain.com`) instead of the root:
 
 | Host  | Type | Value            | TTL  |
 |-------|------|------------------|------|
-| `app` | A    | `YOUR_SERVER_IP` | 3600 |
+| `app` | A    | `<YOUR_SERVER_IP>` | 3600 |
 
 > DNS propagation takes anywhere from a few minutes to an hour. You can check with:
 > ```bash
 > dig yourdomain.com A +short
 > ```
-> Once it returns `YOUR_SERVER_IP` you're good to proceed.
+> Once it returns your server IP you're good to proceed.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Personal site running on Hetzner. React + TypeScript + Bun + Vite, served via Caddy in Docker.
 
-**Live:** `http://YOUR_SERVER_IP`
+**Live:** `http://<YOUR_SERVER_IP>`
 
 ---
 

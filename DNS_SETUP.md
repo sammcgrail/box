@@ -7,8 +7,8 @@ Squarespace Dashboard → **Domains** → `sebland.com` → **DNS Settings** →
 
 | Type | Host | Value | TTL |
 |------|------|-------|-----|
-| A | `@` | `YOUR_SERVER_IP` | Automatic |
-| A | `www` | `YOUR_SERVER_IP` | Automatic |
+| A | `@` | `<YOUR_SERVER_IP>` | Automatic |
+| A | `www` | `<YOUR_SERVER_IP>` | Automatic |
 
 - `@` = the root domain (`sebland.com`)
 - `www` = `www.sebland.com` (redirects to root via Caddy)
