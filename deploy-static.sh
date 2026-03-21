@@ -66,3 +66,8 @@ cp /root/tetris/index.html "$STATIC_DIR/tetris/"
 echo "Precompressing assets..."
 find "$STATIC_DIR" -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.wasm' -o -name '*.svg' \) -exec gzip -9 -k -f {} \;
 echo "Done. Now rebuild Caddy: cd /root/box && docker compose up -d --build web"
+
+# Pickleball — score tracker
+rm -rf "$STATIC_DIR/pickleball"
+mkdir -p "$STATIC_DIR/pickleball"
+cp /root/pickleball/index.html "$STATIC_DIR/pickleball/"

@@ -160,6 +160,18 @@ sebland.com {
         reverse_proxy host.docker.internal:20000
     }
 
+    # pickleball — Pickleball score tracker
+    @pickleball_noslash path /pickleball
+    redir @pickleball_noslash /pickleball/ permanent
+    handle /pickleball/* {
+        uri strip_prefix /pickleball
+        root * /srv/pickleball
+        try_files {path} /srv/pickleball/index.html
+        file_server {
+            precompressed gzip
+        }
+    }
+
     # limericks — St. Patrick's Day limericks
     @limericks_noslash path /limericks
     redir @limericks_noslash /limericks/ permanent

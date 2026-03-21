@@ -13,6 +13,7 @@ import {
   Castle,
   Crown,
   Globe,
+  Trophy,
 } from "lucide-react";
 
 const apps = [
@@ -106,6 +107,13 @@ const apps = [
     href: "/radarling/",
     icon: Globe,
     color: "#38bdf8",
+  },
+  {
+    name: "Pickleball",
+    desc: "Score tracker",
+    href: "/pickleball/",
+    icon: Trophy,
+    color: "#7ec845",
   },
 ];
 
