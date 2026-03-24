@@ -71,3 +71,8 @@ echo "Done. Now rebuild Caddy: cd /root/box && docker compose up -d --build web"
 rm -rf "$STATIC_DIR/pickleball"
 mkdir -p "$STATIC_DIR/pickleball"
 cp /root/pickleball/index.html "$STATIC_DIR/pickleball/"
+
+# Sparks — 3D atomic viewer (Vite build output)
+rm -rf "$STATIC_DIR/sparks"
+mkdir -p "$STATIC_DIR/sparks"
+cp -r /root/sparks/dist/* "$STATIC_DIR/sparks/"

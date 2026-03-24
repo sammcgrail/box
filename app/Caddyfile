@@ -189,7 +189,11 @@ sebland.com {
     redir @sparks_noslash /sparks/ permanent
     handle /sparks/* {
         uri strip_prefix /sparks
-        reverse_proxy host.docker.internal:8780
+        root * /srv/sparks
+        try_files {path} /srv/sparks/index.html
+        file_server {
+            precompressed gzip
+        }
     }
 
     # === ADMIN DASHBOARDS ===
