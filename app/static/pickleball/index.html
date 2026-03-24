@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pickleball Scorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
+  html { touch-action: manipulation; -ms-touch-action: manipulation; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    padding: 12px 0 4px;
+    color: #7ec845;
+    letter-spacing: 1px;
+  }
+
+  .mode-selector {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .mode-selector button {
+    padding: 6px 18px;
+    border-radius: 20px;
+    border: 2px solid #7ec845;
+    background: transparent;
+    color: #7ec845;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-selector button.active {
+    background: #7ec845;
+    color: #1a1a2e;
+  }
+
+  .scoreboard {
+    display: flex;
+    width: 100%;
+    max-width: 500px;
+    flex: 1;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #16213e;
+    border-radius: 16px;
+    padding: 12px 8px;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .team.serving {
+    box-shadow: 0 0 20px rgba(126, 200, 69, 0.3);
+    border: 2px solid #7ec845;
+  }
+  .team:not(.serving) {
+    border: 2px solid transparent;
+  }
+
+  .team-label {
+    font-size: 0.85rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .serving-badge {
+    font-size: 0.7rem;
+    background: #7ec845;
+    color: #1a1a2e;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    visibility: hidden;
+    margin-bottom: 8px;
+  }
+  .team.serving .serving-badge {
+    visibility: visible;
+  }
+
+  .score {
+    font-size: 5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 8px 0;
+    color: #fff;
+    transition: transform 0.15s;
+  }
+  .score.bump {
+    transform: scale(1.15);
+  }
+
+  .server-num {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #7ec845;
+    margin-bottom: 8px;
+    height: 2rem;
+  }
+
+  .score-btn {
+    width: 90%;
+    padding: 14px;
+    margin: 4px 0;
+    border-radius: 12px;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .score-btn:active {
+    transform: scale(0.95);
+  }
+  .btn-point {
+    background: #7ec845;
+    color: #1a1a2e;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px 16px;
+    width: 100%;
+    max-width: 500px;
+  }
+  .controls button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px solid #333;
+    background: #16213e;
+    color: #aaa;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .controls button:active {
+    transform: scale(0.95);
+    background: #1f2b47;
+  }
+
+  .game-info {
+    font-size: 0.8rem;
+    color: #666;
+    padding: 4px 0;
+    text-align: center;
+  }
+
+  .win-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    display: none;
+  }
+  .win-overlay.show { display: flex; }
+  .win-overlay h2 {
+    font-size: 2.5rem;
+    color: #7ec845;
+    margin-bottom: 8px;
+  }
+  .win-overlay .final-score {
+    font-size: 1.5rem;
+    color: #aaa;
+    margin-bottom: 24px;
+  }
+  .win-overlay button {
+    padding: 14px 40px;
+    border-radius: 12px;
+    border: none;
+    background: #7ec845;
+    color: #1a1a2e;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* Singles mode hides server number */
+  .singles .server-num { visibility: hidden; }
+</style>
+</head>
+<body>
+
+<h1>🏓 PICKLEBALL</h1>
+
+<div class="mode-selector">
+  <button id="btn-singles" onclick="setMode('singles')">Singles</button>
+  <button id="btn-doubles" class="active" onclick="setMode('doubles')">Doubles</button>
+</div>
+
+<div class="game-info" id="game-info">Win by 2 · Game to 11</div>
+
+<div class="scoreboard" id="scoreboard">
+  <div class="team serving" id="team1">
+    <div class="team-label">Team 1</div>
+    <div class="serving-badge">SERVING</div>
+    <div class="score" id="score1">0</div>
+    <div class="server-num" id="server1">Server 2</div>
+    <button class="score-btn btn-point" onclick="point(0)">+ POINT</button>
+  </div>
+  <div class="team" id="team2">
+    <div class="team-label">Team 2</div>
+    <div class="serving-badge">SERVING</div>
+    <div class="score" id="score2">0</div>
+    <div class="server-num" id="server2">Server 1</div>
+    <button class="score-btn btn-point" onclick="point(1)">+ POINT</button>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="undo()">↩ Undo</button>
+  <button onclick="switchServe()">🔄 Switch Serve</button>
+  <button onclick="newGame()">🆕 New Game</button>
+</div>
+
+<div class="win-overlay" id="win-overlay">
+  <h2 id="win-text">Team 1 Wins!</h2>
+  <div class="final-score" id="final-score">11 - 5</div>
+  <button onclick="newGame()">New Game</button>
+</div>
+
+<script>
+/*
+  PICKLEBALL RULES:
+  - Games to 11, win by 2
+  - Only the serving team can score
+  - Doubles: each team gets 2 serves (except first serve of game = 1 serve)
+    - Server number: 1 or 2 (which player on the team is serving)
+    - When server 1 loses rally → server 2 serves
+    - When server 2 loses rally → side out (other team serves, server 1)
+  - Singles: no server numbers, just alternating serves on side out
+  - At start of game, serving team starts with server 2 (only 1 serve)
+*/
+
+let state = {
+  scores: [0, 0],
+  serving: 0,       // 0 = team1, 1 = team2
+  serverNum: 2,     // 1 or 2 (doubles only); start at 2 per rules
+  mode: 'doubles',  // 'singles' or 'doubles'
+  history: [],
+  gameOver: false
+};
+
+function saveState() {
+  state.history.push({
+    scores: [...state.scores],
+    serving: state.serving,
+    serverNum: state.serverNum,
+    gameOver: state.gameOver
+  });
+}
+
+function point(team) {
+  if (state.gameOver) return;
+  saveState();
+
+  if (team === state.serving) {
+    // Serving team scores
+    state.scores[team]++;
+    animateScore(team);
+
+    // Check win: game to 11, win by 2
+    const s = state.scores;
+    if (s[team] >= 11 && s[team] - s[1 - team] >= 2) {
+      state.gameOver = true;
+      showWin(team);
+      return;
+    }
+  } else {
+    // Receiving team wins rally → side out (or switch server in doubles)
+    if (state.mode === 'doubles') {
+      if (state.serverNum === 1) {
+        // Server 1 lost → server 2 serves (same team)
+        state.serverNum = 2;
+      } else {
+        // Server 2 lost → side out
+        state.serving = 1 - state.serving;
+        state.serverNum = 1;
+      }
+    } else {
+      // Singles: side out
+      state.serving = 1 - state.serving;
+    }
+  }
+  render();
+}
+
+function switchServe() {
+  if (state.gameOver) return;
+  saveState();
+  state.serving = 1 - state.serving;
+  if (state.mode === 'doubles') {
+    state.serverNum = 1;
+  }
+  render();
+}
+
+function undo() {
+  if (state.history.length === 0) return;
+  const prev = state.history.pop();
+  state.scores = prev.scores;
+  state.serving = prev.serving;
+  state.serverNum = prev.serverNum;
+  state.gameOver = prev.gameOver;
+  document.getElementById('win-overlay').classList.remove('show');
+  render();
+}
+
+function newGame() {
+  state.scores = [0, 0];
+  state.serving = 0;
+  state.serverNum = 2; // First serve of game starts with server 2
+  state.history = [];
+  state.gameOver = false;
+  document.getElementById('win-overlay').classList.remove('show');
+  render();
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  document.getElementById('btn-singles').classList.toggle('active', mode === 'singles');
+  document.getElementById('btn-doubles').classList.toggle('active', mode === 'doubles');
+  document.getElementById('scoreboard').classList.toggle('singles', mode === 'singles');
+  newGame();
+}
+
+function showWin(team) {
+  const overlay = document.getElementById('win-overlay');
+  document.getElementById('win-text').textContent = `Team ${team + 1} Wins! 🎉`;
+  document.getElementById('final-score').textContent = `${state.scores[0]} - ${state.scores[1]}`;
+  overlay.classList.add('show');
+}
+
+function animateScore(team) {
+  const el = document.getElementById(`score${team + 1}`);
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 150);
+}
+
+function render() {
+  document.getElementById('score1').textContent = state.scores[0];
+  document.getElementById('score2').textContent = state.scores[1];
+
+  const t1 = document.getElementById('team1');
+  const t2 = document.getElementById('team2');
+  t1.classList.toggle('serving', state.serving === 0);
+  t2.classList.toggle('serving', state.serving === 1);
+
+  if (state.mode === 'doubles') {
+    document.getElementById('server1').textContent = state.serving === 0 ? `Server ${state.serverNum}` : '';
+    document.getElementById('server2').textContent = state.serving === 1 ? `Server ${state.serverNum}` : '';
+  }
+
+  // Game call: serving-score, receiving-score, server-number
+  const s = state.serving;
+  const r = 1 - s;
+  let call = `${state.scores[s]}-${state.scores[r]}`;
+  if (state.mode === 'doubles') call += `-${state.serverNum}`;
+  document.getElementById('game-info').textContent = `Score call: ${call} · Game to 11, win by 2`;
+}
+
+// Prevent double-tap zoom on iOS — only on non-button areas
+document.addEventListener('dblclick', e => {
+  if (!e.target.closest('button')) e.preventDefault();
+});
+
+// Init
+render();
+</script>
+</body>
+</html>

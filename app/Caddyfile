@@ -34,7 +34,7 @@ sebland.com {
 
     # ascii — Conway's Game of Life
     @ascii_noslash path /ascii
-    redir @ascii_noslash /ascii/ permanent
+    rewrite @ascii_noslash /ascii/
     handle /ascii/* {
         uri strip_prefix /ascii
         root * /srv/ascii
@@ -46,7 +46,7 @@ sebland.com {
 
     # paint — MSPaint clone
     @paint_noslash path /paint
-    redir @paint_noslash /paint/ permanent
+    rewrite @paint_noslash /paint/
     handle /paint/* {
         uri strip_prefix /paint
         root * /srv/paint
@@ -58,7 +58,7 @@ sebland.com {
 
     # tetris — Classic Tetris
     @tetris_noslash path /tetris
-    redir @tetris_noslash /tetris/ permanent
+    rewrite @tetris_noslash /tetris/
     handle /tetris/* {
         uri strip_prefix /tetris
         root * /srv/tetris
@@ -70,7 +70,7 @@ sebland.com {
 
     # brick — Brick Breaker
     @brick_noslash path /brick
-    redir @brick_noslash /brick/ permanent
+    rewrite @brick_noslash /brick/
     handle /brick/* {
         uri strip_prefix /brick
         root * /srv/brick
@@ -82,7 +82,7 @@ sebland.com {
 
     # minesweeper — Win95 Minesweeper
     @minesweeper_noslash path /minesweeper
-    redir @minesweeper_noslash /minesweeper/ permanent
+    rewrite @minesweeper_noslash /minesweeper/
     handle /minesweeper/* {
         uri strip_prefix /minesweeper
         root * /srv/minesweeper
@@ -94,7 +94,7 @@ sebland.com {
 
     # snake — Nokia Snake
     @snake_noslash path /snake
-    redir @snake_noslash /snake/ permanent
+    rewrite @snake_noslash /snake/
     handle /snake/* {
         uri strip_prefix /snake
         root * /srv/snake
@@ -106,7 +106,7 @@ sebland.com {
 
     # sand — Sand Game (Falling Sand Simulation)
     @sand_noslash path /sand
-    redir @sand_noslash /sand/ permanent
+    rewrite @sand_noslash /sand/
     handle /sand/* {
         uri strip_prefix /sand
         root * /srv/sand
@@ -118,7 +118,7 @@ sebland.com {
 
     # tower — PixelClash Tower Defense
     @tower_noslash path /tower
-    redir @tower_noslash /tower/ permanent
+    rewrite @tower_noslash /tower/
     handle /tower/* {
         uri strip_prefix /tower
         root * /srv/tower
@@ -130,7 +130,7 @@ sebland.com {
 
     # chess — 6D Chess
     @chess_noslash path /chess
-    redir @chess_noslash /chess/ permanent
+    rewrite @chess_noslash /chess/
     handle /chess/* {
         uri strip_prefix /chess
         root * /srv/chess
@@ -142,7 +142,7 @@ sebland.com {
 
     # cat — Random cats from cataas
     @cat_noslash path /cat
-    redir @cat_noslash /cat/ permanent
+    rewrite @cat_noslash /cat/
     handle /cat/* {
         uri strip_prefix /cat
         root * /srv/cat
@@ -154,7 +154,7 @@ sebland.com {
 
     # radarling — Weather radar globe viewer
     @radarling_noslash path /radarling
-    redir @radarling_noslash /radarling/ permanent
+    rewrite @radarling_noslash /radarling/
     handle /radarling/* {
         uri strip_prefix /radarling
         reverse_proxy host.docker.internal:20000
@@ -162,7 +162,7 @@ sebland.com {
 
     # pickleball — Pickleball score tracker
     @pickleball_noslash path /pickleball
-    redir @pickleball_noslash /pickleball/ permanent
+    rewrite @pickleball_noslash /pickleball/
     handle /pickleball/* {
         uri strip_prefix /pickleball
         root * /srv/pickleball
@@ -174,7 +174,7 @@ sebland.com {
 
     # limericks — St. Patrick's Day limericks
     @limericks_noslash path /limericks
-    redir @limericks_noslash /limericks/ permanent
+    rewrite @limericks_noslash /limericks/
     handle /limericks/* {
         uri strip_prefix /limericks
         root * /srv/limericks
@@ -186,7 +186,7 @@ sebland.com {
 
     # sparks — 3D atomic viewer
     @sparks_noslash path /sparks
-    redir @sparks_noslash /sparks/ permanent
+    rewrite @sparks_noslash /sparks/
     handle /sparks/* {
         uri strip_prefix /sparks
         root * /srv/sparks
