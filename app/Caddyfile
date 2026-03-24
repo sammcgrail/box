@@ -184,6 +184,14 @@ sebland.com {
         }
     }
 
+    # sparks — 3D atomic viewer
+    @sparks_noslash path /sparks
+    redir @sparks_noslash /sparks/ permanent
+    handle /sparks/* {
+        uri strip_prefix /sparks
+        reverse_proxy host.docker.internal:8780
+    }
+
     # === ADMIN DASHBOARDS ===
 
     # netdata monitoring dashboard (basic auth protected)

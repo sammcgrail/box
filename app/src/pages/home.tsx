@@ -14,6 +14,7 @@ import {
   Crown,
   Globe,
   Trophy,
+  Atom,
 } from "lucide-react";
 
 const apps = [
@@ -114,6 +115,13 @@ const apps = [
     href: "/pickleball/",
     icon: Trophy,
     color: "#7ec845",
+  },
+  {
+    name: "Sparks",
+    desc: "3D atomic viewer",
+    href: "/sparks/",
+    icon: Atom,
+    color: "#06b6d4",
   },
 ];
 
