@@ -14,7 +14,8 @@
         font-display: swap;
         src: url('/fonts/press-start-2p.woff2') format('woff2');
       }
-      body { margin: 0; background: #09090b; color: #fafafa; font-family: system-ui, -apple-system, sans-serif; }
+      *, *::before, *::after { box-sizing: border-box; }
+      body { margin: 0; background: #09090b; color: #fafafa; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
       #shell {
         display: flex;
         flex-direction: column;
