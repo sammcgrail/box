@@ -33,9 +33,10 @@ sebland.com {
     # === STATIC APPS (served directly by Caddy) ===
 
     # ascii — Conway's Game of Life
-    @ascii_noslash path /ascii
-    rewrite @ascii_noslash /ascii/
-    handle /ascii/* {
+    @ascii_slash path /ascii/
+    redir @ascii_slash /ascii temporary
+    @ascii path /ascii /ascii/*
+    handle @ascii {
         uri strip_prefix /ascii
         root * /srv/ascii
         try_files {path} /srv/ascii/index.html
@@ -45,9 +46,10 @@ sebland.com {
     }
 
     # paint — MSPaint clone
-    @paint_noslash path /paint
-    rewrite @paint_noslash /paint/
-    handle /paint/* {
+    @paint_slash path /paint/
+    redir @paint_slash /paint temporary
+    @paint path /paint /paint/*
+    handle @paint {
         uri strip_prefix /paint
         root * /srv/paint
         try_files {path} /srv/paint/index.html
@@ -57,9 +59,10 @@ sebland.com {
     }
 
     # tetris — Classic Tetris
-    @tetris_noslash path /tetris
-    rewrite @tetris_noslash /tetris/
-    handle /tetris/* {
+    @tetris_slash path /tetris/
+    redir @tetris_slash /tetris temporary
+    @tetris path /tetris /tetris/*
+    handle @tetris {
         uri strip_prefix /tetris
         root * /srv/tetris
         try_files {path} /srv/tetris/index.html
@@ -69,9 +72,10 @@ sebland.com {
     }
 
     # brick — Brick Breaker
-    @brick_noslash path /brick
-    rewrite @brick_noslash /brick/
-    handle /brick/* {
+    @brick_slash path /brick/
+    redir @brick_slash /brick temporary
+    @brick path /brick /brick/*
+    handle @brick {
         uri strip_prefix /brick
         root * /srv/brick
         try_files {path} /srv/brick/index.html
@@ -81,9 +85,10 @@ sebland.com {
     }
 
     # minesweeper — Win95 Minesweeper
-    @minesweeper_noslash path /minesweeper
-    rewrite @minesweeper_noslash /minesweeper/
-    handle /minesweeper/* {
+    @minesweeper_slash path /minesweeper/
+    redir @minesweeper_slash /minesweeper temporary
+    @minesweeper path /minesweeper /minesweeper/*
+    handle @minesweeper {
         uri strip_prefix /minesweeper
         root * /srv/minesweeper
         try_files {path} /srv/minesweeper/index.html
@@ -93,9 +98,10 @@ sebland.com {
     }
 
     # snake — Nokia Snake
-    @snake_noslash path /snake
-    rewrite @snake_noslash /snake/
-    handle /snake/* {
+    @snake_slash path /snake/
+    redir @snake_slash /snake temporary
+    @snake path /snake /snake/*
+    handle @snake {
         uri strip_prefix /snake
         root * /srv/snake
         try_files {path} /srv/snake/index.html
@@ -105,9 +111,10 @@ sebland.com {
     }
 
     # sand — Sand Game (Falling Sand Simulation)
-    @sand_noslash path /sand
-    rewrite @sand_noslash /sand/
-    handle /sand/* {
+    @sand_slash path /sand/
+    redir @sand_slash /sand temporary
+    @sand path /sand /sand/*
+    handle @sand {
         uri strip_prefix /sand
         root * /srv/sand
         try_files {path} /srv/sand/index.html
@@ -117,9 +124,10 @@ sebland.com {
     }
 
     # tower — PixelClash Tower Defense
-    @tower_noslash path /tower
-    rewrite @tower_noslash /tower/
-    handle /tower/* {
+    @tower_slash path /tower/
+    redir @tower_slash /tower temporary
+    @tower path /tower /tower/*
+    handle @tower {
         uri strip_prefix /tower
         root * /srv/tower
         try_files {path} /srv/tower/index.html
@@ -129,9 +137,10 @@ sebland.com {
     }
 
     # chess — 6D Chess
-    @chess_noslash path /chess
-    rewrite @chess_noslash /chess/
-    handle /chess/* {
+    @chess_slash path /chess/
+    redir @chess_slash /chess temporary
+    @chess path /chess /chess/*
+    handle @chess {
         uri strip_prefix /chess
         root * /srv/chess
         try_files {path} /srv/chess/index.html
@@ -141,9 +150,10 @@ sebland.com {
     }
 
     # cat — Random cats from cataas
-    @cat_noslash path /cat
-    rewrite @cat_noslash /cat/
-    handle /cat/* {
+    @cat_slash path /cat/
+    redir @cat_slash /cat temporary
+    @cat path /cat /cat/*
+    handle @cat {
         uri strip_prefix /cat
         root * /srv/cat
         try_files {path} /srv/cat/index.html
@@ -153,17 +163,19 @@ sebland.com {
     }
 
     # radarling — Weather radar globe viewer
-    @radarling_noslash path /radarling
-    rewrite @radarling_noslash /radarling/
-    handle /radarling/* {
+    @radarling_slash path /radarling/
+    redir @radarling_slash /radarling temporary
+    @radarling path /radarling /radarling/*
+    handle @radarling {
         uri strip_prefix /radarling
         reverse_proxy host.docker.internal:20000
     }
 
     # pickleball — Pickleball score tracker
-    @pickleball_noslash path /pickleball
-    rewrite @pickleball_noslash /pickleball/
-    handle /pickleball/* {
+    @pickleball_slash path /pickleball/
+    redir @pickleball_slash /pickleball temporary
+    @pickleball path /pickleball /pickleball/*
+    handle @pickleball {
         uri strip_prefix /pickleball
         root * /srv/pickleball
         try_files {path} /srv/pickleball/index.html
@@ -173,9 +185,10 @@ sebland.com {
     }
 
     # limericks — St. Patrick's Day limericks
-    @limericks_noslash path /limericks
-    rewrite @limericks_noslash /limericks/
-    handle /limericks/* {
+    @limericks_slash path /limericks/
+    redir @limericks_slash /limericks temporary
+    @limericks path /limericks /limericks/*
+    handle @limericks {
         uri strip_prefix /limericks
         root * /srv/limericks
         try_files {path} /srv/limericks/index.html
@@ -185,9 +198,10 @@ sebland.com {
     }
 
     # sparks — 3D atomic viewer
-    @sparks_noslash path /sparks
-    rewrite @sparks_noslash /sparks/
-    handle /sparks/* {
+    @sparks_slash path /sparks/
+    redir @sparks_slash /sparks temporary
+    @sparks path /sparks /sparks/*
+    handle @sparks {
         uri strip_prefix /sparks
         root * /srv/sparks
         try_files {path} /srv/sparks/index.html
