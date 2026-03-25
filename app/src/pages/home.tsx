@@ -15,6 +15,7 @@ import {
   Globe,
   Trophy,
   Atom,
+  Target,
 } from "lucide-react";
 
 const apps = [
@@ -122,6 +123,13 @@ const apps = [
     href: "/sparks",
     icon: Atom,
     color: "#06b6d4",
+  },
+  {
+    name: "Atari Tank",
+    desc: "P2P tank battle",
+    href: "/combat",
+    icon: Target,
+    color: "#ff6600",
   },
 ];
 
