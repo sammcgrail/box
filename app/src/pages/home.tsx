@@ -16,6 +16,7 @@ import {
   Trophy,
   Atom,
   Target,
+  Volume2,
 } from "lucide-react";
 
 const apps = [
@@ -130,6 +131,13 @@ const apps = [
     href: "/combat",
     icon: Target,
     color: "#ff6600",
+  },
+  {
+    name: "Airhorn",
+    desc: "BWAAAAAAH",
+    href: "/airhorn",
+    icon: Volume2,
+    color: "#ff9900",
   },
 ];
 
