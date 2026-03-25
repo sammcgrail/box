@@ -240,6 +240,12 @@ sebland.com {
         reverse_proxy host.docker.internal:20001
     }
 
+    # combat — Atari 2600 Tank Battle (PeerJS P2P)
+    handle /combat* {
+        uri strip_prefix /combat
+        reverse_proxy host.docker.internal:20002
+    }
+
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
