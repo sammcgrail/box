@@ -12,11 +12,12 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh;
   font-family: 'MS Sans Serif', 'Arial', sans-serif;
   -webkit-user-select: none;
   user-select: none;
+  overflow: hidden;
 }
-
 .window {
   background: #c0c0c0;
   border-top: 3px solid #fff;
@@ -24,6 +25,7 @@ body {
   border-right: 3px solid #808080;
   border-bottom: 3px solid #808080;
   padding: 6px;
+  transform-origin: center center;
 }
 
 .title-bar {
@@ -667,6 +669,31 @@ body {
     updateMineCount();
     renderBoard();
   }
+
+  // === Auto-scale to fit viewport ===
+  const windowEl = document.querySelector('.window');
+
+  function scaleGame() {
+    // Reset scale to measure natural size
+    windowEl.style.transform = 'none';
+    const rect = windowEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pad = 16; // small margin
+    const scaleX = (vw - pad) / rect.width;
+    const scaleY = (vh - pad) / rect.height;
+    const s = Math.min(scaleX, scaleY, 3); // cap at 3x for easy mode
+    windowEl.style.transform = `scale(${s})`;
+  }
+
+  window.addEventListener('resize', scaleGame);
+
+  // Patch newGame to re-scale after render
+  const _origNewGame = newGame;
+  newGame = function() {
+    _origNewGame();
+    requestAnimationFrame(scaleGame);
+  };
 
   newGame();
 })();
