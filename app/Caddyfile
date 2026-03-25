@@ -234,6 +234,12 @@ sebland.com {
         reverse_proxy host.docker.internal:19999
     }
 
+    # airhorn — AIRHORN button
+    handle /airhorn* {
+        uri strip_prefix /airhorn
+        reverse_proxy host.docker.internal:20001
+    }
+
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
