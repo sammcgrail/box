@@ -210,6 +210,19 @@ sebland.com {
         }
     }
 
+    # tictactoe — Tic Tac Toe vs CPU
+    @tictactoe_slash path /tictactoe/
+    redir @tictactoe_slash /tictactoe temporary
+    @tictactoe path /tictactoe /tictactoe/*
+    handle @tictactoe {
+        uri strip_prefix /tictactoe
+        root * /srv/tictactoe
+        try_files {path} /srv/tictactoe/index.html
+        file_server {
+            precompressed gzip
+        }
+    }
+
     # === ADMIN DASHBOARDS ===
 
     # netdata monitoring dashboard (basic auth protected)
