@@ -90,7 +90,7 @@ let playerX, playerY, playerAngle;
 let enemies = [];
 let exitX, exitY;
 let attackTimer = 0, hurtTimer = 0, levelTransitionTimer = 0;
-let torchPhase = 0;
+let torchPhase = 0, headBob = 0, headBobActive = false;
 let zBuffer = [];
 let textures = {};
 let keys = {};
@@ -344,7 +344,7 @@ function generateLevel() {
 function setupInput() {
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
-    if (e.code === 'Space' && gameState === 'playing') {
+    if ((e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') && gameState === 'playing') {
       e.preventDefault();
       playerAttack();
     }
@@ -436,13 +436,26 @@ function setupTouchControls() {
 }
 
 // ===== GAME LOOP =====
+let fpsFrames = 0, fpsTime = 0, fpsDisplay = 0;
 function gameLoop(time) {
   const dt = Math.min((time - lastTime) / 1000, 0.05);
   lastTime = time;
 
+  // FPS counter
+  fpsFrames++;
+  fpsTime += dt;
+  if (fpsTime >= 0.5) { fpsDisplay = Math.round(fpsFrames / fpsTime); fpsFrames = 0; fpsTime = 0; }
+
   if (gameState === 'playing') {
     update(dt);
     render();
+    // Draw FPS
+    ctx.save();
+    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText(fpsDisplay + ' fps', W - 4, 12);
+    ctx.restore();
   } else if (gameState === 'title') {
     drawTitleBackground();
   }
@@ -488,10 +501,14 @@ function update(dt) {
     playerAngle += touchLookDX;
     touchLookDX *= 0.8;
   } else {
-    if (keys['KeyW'] || keys['ArrowUp']) { moveX += cosA; moveY += sinA; }
-    if (keys['KeyS'] || keys['ArrowDown']) { moveX -= cosA; moveY -= sinA; }
-    if (keys['KeyA'] || keys['ArrowLeft']) { moveX += Math.cos(playerAngle - Math.PI/2); moveY += Math.sin(playerAngle - Math.PI/2); }
-    if (keys['KeyD'] || keys['ArrowRight']) { moveX += Math.cos(playerAngle + Math.PI/2); moveY += Math.sin(playerAngle + Math.PI/2); }
+    if (keys['KeyW']) { moveX += cosA; moveY += sinA; }
+    if (keys['KeyS']) { moveX -= cosA; moveY -= sinA; }
+    if (keys['KeyA']) { moveX += Math.cos(playerAngle - Math.PI/2); moveY += Math.sin(playerAngle - Math.PI/2); }
+    if (keys['KeyD']) { moveX += Math.cos(playerAngle + Math.PI/2); moveY += Math.sin(playerAngle + Math.PI/2); }
+    // Arrow keys: left/right turn, up/down attack (handled in keydown)
+    const TURN_SPEED = 2.5;
+    if (keys['ArrowLeft']) playerAngle -= TURN_SPEED * dt;
+    if (keys['ArrowRight']) playerAngle += TURN_SPEED * dt;
   }
 
   // Normalize movement
@@ -513,6 +530,15 @@ function update(dt) {
         !isWall(playerX + r, newY - r) && !isWall(playerX - r, newY + r)) {
       playerY = newY;
     }
+  }
+
+  // Head bob
+  if (moveLen > 0) {
+    headBob += dt * 8;
+    headBobActive = true;
+  } else {
+    headBobActive = false;
+    headBob *= 0.9;
   }
 
   // Explore minimap
@@ -637,6 +663,7 @@ function render() {
   zBuffer.length = SCREEN_W;
 
   const torchFlicker = 0.92 + Math.sin(torchPhase) * 0.04 + Math.sin(torchPhase * 1.7) * 0.03 + Math.sin(torchPhase * 3.1) * 0.01;
+  const bobOffset = headBobActive ? Math.sin(headBob) * 4 : Math.sin(headBob) * 4 * 0.3;
 
   // Cast rays for walls
   for (let x = 0; x < SCREEN_W; x++) {
@@ -676,8 +703,8 @@ function render() {
 
     if (hit) {
       const lineHeight = (SCREEN_H / correctedDist) | 0;
-      let drawStart = ((SCREEN_H - lineHeight) / 2) | 0;
-      let drawEnd = ((SCREEN_H + lineHeight) / 2) | 0;
+      let drawStart = ((SCREEN_H - lineHeight) / 2 + bobOffset) | 0;
+      let drawEnd = ((SCREEN_H + lineHeight) / 2 + bobOffset) | 0;
 
       // Texture mapping
       let wallX;
