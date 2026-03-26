@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>CRYPT</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+html, body { width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #000; touch-action: none; }
+canvas { display: block; width: 100%; height: 100%; height: 100dvh; image-rendering: pixelated; image-rendering: crisp-edges; object-fit: cover; }
 #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 #ui > * { pointer-events: auto; }
 #hud { position: absolute; bottom: 20px; left: 20px; color: #c44; font-family: 'Courier New', monospace; font-size: 16px; text-shadow: 0 0 8px #600; pointer-events: none; }
@@ -21,7 +23,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 #death-screen h1 { font-family: 'Courier New', monospace; font-size: 60px; color: #a00; text-shadow: 0 0 40px #800; letter-spacing: 12px; }
 #death-screen .sub { font-family: 'Courier New', monospace; font-size: 18px; color: #644; margin-top: 20px; }
 #death-screen .hint { font-family: 'Courier New', monospace; font-size: 12px; color: #443; margin-top: 40px; }
-#touch-left { position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; display: none; pointer-events: auto; }
+#touch-left { position: absolute; bottom: 20px; left: 20px; width: 130px; height: 130px; display: none; pointer-events: auto; }
+#joy-base { position: absolute; top: 0; left: 0; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.15); }
+#joy-thumb { position: absolute; top: 41px; left: 41px; width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.35); transition: none; }
 #touch-right { position: absolute; bottom: 0; right: 0; width: 50%; height: 100%; display: none; pointer-events: auto; }
 #attack-btn { position: absolute; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: rgba(160,40,40,0.4); border: 2px solid rgba(160,40,40,0.6); display: none; pointer-events: auto; font-family: 'Courier New', monospace; font-size: 11px; color: #c66; text-align: center; line-height: 70px; }
 @keyframes flicker {
@@ -58,7 +62,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <div class="sub" id="death-info"></div>
     <div class="hint">CLICK TO DESCEND AGAIN</div>
   </div>
-  <div id="touch-left"></div>
+  <div id="touch-left"><div id="joy-base"></div><div id="joy-thumb"></div></div>
   <div id="touch-right"></div>
   <div id="attack-btn">STRIKE</div>
 </div>
@@ -68,7 +72,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
 // ===== CONSTANTS =====
 const TILE_EMPTY = 0, TILE_WALL = 1, TILE_EXIT = 2;
-const SCREEN_W = 480, SCREEN_H = 320;
+const _isMob = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const SCREEN_W = _isMob ? 320 : 480, SCREEN_H = _isMob ? 213 : 320;
 const TEX_SIZE = 64;
 const FOV = Math.PI / 3;
 const MOVE_SPEED = 3.2;
@@ -367,8 +372,16 @@ function setupTouchControls() {
   const left = document.getElementById('touch-left');
   const right = document.getElementById('touch-right');
   const attackBtn = document.getElementById('attack-btn');
+  const joyThumb = document.getElementById('joy-thumb');
+  const joyRadius = 65; // half of 130px base
+  const thumbRadius = 24; // half of 48px thumb
 
-  // Joystick
+  function resetThumb() {
+    joyThumb.style.left = (joyRadius - thumbRadius) + 'px';
+    joyThumb.style.top = (joyRadius - thumbRadius) + 'px';
+  }
+
+  // Joystick with visual feedback
   left.addEventListener('touchstart', e => {
     e.preventDefault();
     const t = e.changedTouches[0];
@@ -382,15 +395,20 @@ function setupTouchControls() {
         const rect = left.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        const dx = (t.clientX - cx) / (rect.width / 2);
-        const dy = (t.clientY - cy) / (rect.height / 2);
+        const dx = (t.clientX - cx) / joyRadius;
+        const dy = (t.clientY - cy) / joyRadius;
         const len = Math.hypot(dx, dy);
-        const maxLen = 1;
-        if (len > maxLen) {
+        if (len > 1) {
           touchMoveX = dx / len; touchMoveY = dy / len;
         } else {
           touchMoveX = dx; touchMoveY = dy;
         }
+        // Move thumb visually (clamped to base)
+        const clampLen = Math.min(len, 1);
+        const thumbX = (dx / (len || 1)) * clampLen * (joyRadius - thumbRadius);
+        const thumbY = (dy / (len || 1)) * clampLen * (joyRadius - thumbRadius);
+        joyThumb.style.left = (joyRadius - thumbRadius + thumbX) + 'px';
+        joyThumb.style.top = (joyRadius - thumbRadius + thumbY) + 'px';
       }
     }
   }, {passive: false});
@@ -398,11 +416,16 @@ function setupTouchControls() {
     for (const t of e.changedTouches) {
       if (t.identifier === touchMoveId) {
         touchMoveId = null; touchMoveX = 0; touchMoveY = 0;
+        resetThumb();
       }
     }
   });
+  left.addEventListener('touchcancel', e => {
+    touchMoveId = null; touchMoveX = 0; touchMoveY = 0;
+    resetThumb();
+  });
 
-  // Look
+  // Look — swipe right half of screen
   let lastTouchX = 0;
   right.addEventListener('touchstart', e => {
     e.preventDefault();
