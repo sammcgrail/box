@@ -12,45 +12,49 @@
 body{
   font-family:'Source Serif 4',Georgia,'Times New Roman',serif;
   background:#FAF7F2;color:#191918;
-  max-width:1100px;margin:0 auto;padding:0;
-  line-height:1.5;font-size:13px;
+  max-width:1400px;margin:0 auto;padding:0 clamp(12px, 3vw, 40px);
+  line-height:1.6;font-size:clamp(14px, 1.1vw, 17px);
+  min-height:100vh;
 }
 
 /* Masthead */
 .masthead{
   background:#1a1a2e;color:#FAF7F2;
-  text-align:center;padding:16px 20px 12px;
+  text-align:center;padding:clamp(16px, 2.5vw, 32px) clamp(20px, 4vw, 60px) clamp(12px, 2vw, 24px);
   border-bottom:4px double #D97757;
+  margin:0 calc(-1 * clamp(12px, 3vw, 40px));
 }
 .masthead h1{
   font-family:Georgia,'Times New Roman',serif;
-  font-size:42px;font-weight:700;letter-spacing:2px;
+  font-size:clamp(32px, 5vw, 64px);font-weight:700;letter-spacing:3px;
   margin:0;line-height:1.1;
 }
 .masthead .subtitle{
   font-family:sans-serif;
-  font-size:11px;color:#8A7E72;
-  letter-spacing:3px;text-transform:uppercase;
-  margin-top:4px;
+  font-size:clamp(10px, 1vw, 14px);color:#8A7E72;
+  letter-spacing:4px;text-transform:uppercase;
+  margin-top:6px;
 }
 .masthead .dateline{
   font-family:sans-serif;
-  font-size:10px;color:#8A7E72;
-  margin-top:6px;display:flex;justify-content:space-between;
-  border-top:1px solid #3a3a4e;padding-top:6px;
+  font-size:clamp(9px, 0.85vw, 12px);color:#8A7E72;
+  margin-top:8px;display:flex;justify-content:space-between;
+  border-top:1px solid #3a3a4e;padding-top:8px;
 }
 
 /* Ticker */
 .ticker{
   background:#F0EBE3;border-bottom:1px solid #C4B5A0;
-  padding:6px 20px;font-size:11px;color:#8A7E72;
+  padding:clamp(6px, 1vw, 12px) clamp(20px, 3vw, 40px);
+  font-size:clamp(11px, 0.9vw, 14px);color:#8A7E72;
   font-family:sans-serif;
-  display:flex;gap:20px;overflow:hidden;flex-wrap:wrap;
+  display:flex;gap:clamp(16px, 2.5vw, 32px);overflow:hidden;flex-wrap:wrap;
+  margin:0 calc(-1 * clamp(12px, 3vw, 40px));
 }
 .ticker strong{color:#D97757}
 
 /* Main content area */
-.content{padding:16px 20px}
+.content{padding:clamp(16px, 2.5vw, 32px) 0}
 
 /* Main story grid */
 .main-grid{
@@ -58,25 +62,25 @@ body{
   grid-template-columns:2fr 1fr;
   gap:0;
   border-bottom:2px solid #191918;
-  padding-bottom:16px;margin-bottom:16px;
+  padding-bottom:clamp(16px, 2vw, 28px);margin-bottom:clamp(16px, 2vw, 28px);
 }
 .main-story{
-  padding-right:20px;
+  padding-right:clamp(16px, 2.5vw, 32px);
   border-right:1px solid #C4B5A0;
 }
-.sidebar{padding-left:20px}
+.sidebar{padding-left:clamp(16px, 2.5vw, 32px)}
 
 /* Headlines */
 .headline-main{
-  font-size:32px;font-weight:700;line-height:1.15;
-  margin-bottom:4px;
+  font-size:clamp(26px, 3vw, 42px);font-weight:700;line-height:1.15;
+  margin-bottom:6px;
 }
 .headline-sub{
-  font-size:20px;font-weight:700;line-height:1.2;
-  margin-bottom:4px;
+  font-size:clamp(18px, 1.8vw, 26px);font-weight:700;line-height:1.2;
+  margin-bottom:6px;
 }
 .headline-minor{
-  font-size:16px;font-weight:700;line-height:1.2;
+  font-size:clamp(15px, 1.4vw, 20px);font-weight:700;line-height:1.2;
   margin-bottom:4px;
 }
 .kicker{
@@ -94,22 +98,22 @@ body{
 
 /* Body text */
 .body-text{
-  font-size:13px;line-height:1.55;
-  column-count:2;column-gap:20px;
+  font-size:inherit;line-height:1.6;
+  column-count:2;column-gap:clamp(20px, 2.5vw, 36px);
   column-rule:1px solid #C4B5A0;
 }
 .body-text.single-col{column-count:1}
-.body-text p{margin-bottom:8px;text-align:justify}
+.body-text p{margin-bottom:10px;text-align:justify}
 .drop-cap::first-letter{
-  float:left;font-size:48px;line-height:36px;
-  padding:2px 6px 0 0;font-weight:700;color:#D97757;
+  float:left;font-size:clamp(40px, 4vw, 64px);line-height:0.8;
+  padding:4px 8px 0 0;font-weight:700;color:#D97757;
 }
 
 /* Pull quote */
 .pull-quote{
   border-left:3px solid #D97757;
-  padding:8px 12px;margin:12px 0;
-  font-size:16px;font-style:italic;
+  padding:clamp(8px, 1.2vw, 16px) clamp(12px, 1.5vw, 24px);margin:clamp(12px, 1.5vw, 24px) 0;
+  font-size:clamp(15px, 1.4vw, 22px);font-style:italic;
   color:#2D2D2D;line-height:1.4;
 }
 
@@ -126,35 +130,37 @@ body{
   grid-template-columns:repeat(3,1fr);
   gap:0;
   border-bottom:2px solid #191918;
-  padding-bottom:16px;margin-bottom:16px;
+  padding-bottom:clamp(16px, 2vw, 28px);margin-bottom:clamp(16px, 2vw, 28px);
 }
 .secondary-story{
-  padding:0 16px;
+  padding:0 clamp(12px, 1.8vw, 24px);
   border-right:1px solid #C4B5A0;
 }
 .secondary-story:first-child{padding-left:0}
 .secondary-story:last-child{border-right:none;padding-right:0}
+.secondary-story p, .sidebar-item p{font-size:clamp(12px, 1vw, 15px);line-height:1.55}
+.story-body{font-size:clamp(12px, 1vw, 15px);line-height:1.55}
 
 /* Editor's desk */
 .editors-desk{
   background:#F0EBE3;
   border:1px solid #C4B5A0;
-  padding:12px 16px;margin-top:8px;
+  padding:clamp(12px, 1.5vw, 24px) clamp(16px, 2vw, 32px);margin-top:clamp(8px, 1vw, 16px);
 }
 .editors-desk .desk-title{
   font-family:sans-serif;
-  font-size:10px;text-transform:uppercase;
+  font-size:clamp(10px, 0.85vw, 13px);text-transform:uppercase;
   letter-spacing:2px;color:#D97757;
-  font-weight:700;margin-bottom:8px;
+  font-weight:700;margin-bottom:10px;
   border-bottom:1px solid #C4B5A0;
-  padding-bottom:4px;
+  padding-bottom:6px;
 }
 .editors-desk .entry{
-  margin-bottom:8px;font-size:12px;
+  margin-bottom:10px;font-size:clamp(12px, 1vw, 15px);
 }
 .editors-desk .entry-label{
   font-family:sans-serif;
-  font-size:9px;color:#8A7E72;
+  font-size:clamp(9px, 0.75vw, 12px);color:#8A7E72;
   text-transform:uppercase;letter-spacing:0.5px;
 }
 
@@ -172,8 +178,14 @@ body{
   margin-top:16px;
 }
 
+/* Tablet */
+@media(max-width:900px){
+  .secondary-grid{grid-template-columns:1fr 1fr}
+  .secondary-story:last-child{border-right:none}
+}
+
 /* Mobile */
-@media(max-width:700px){
+@media(max-width:600px){
   .main-grid{grid-template-columns:1fr}
   .main-story{padding-right:0;border-right:none;border-bottom:1px solid #C4B5A0;padding-bottom:16px;margin-bottom:16px}
   .sidebar{padding-left:0}
@@ -181,8 +193,8 @@ body{
   .secondary-story{padding:0;border-right:none;border-bottom:1px solid #C4B5A0;padding-bottom:12px;margin-bottom:12px}
   .secondary-story:last-child{border-bottom:none}
   .body-text{column-count:1}
-  .masthead h1{font-size:28px}
-  .headline-main{font-size:24px}
+  .masthead{margin:0 calc(-1 * clamp(12px, 3vw, 40px))}
+  .ticker{margin:0 calc(-1 * clamp(12px, 3vw, 40px))}
 }
 </style>
 </head>
@@ -233,17 +245,17 @@ body{
     <div class="sidebar-item">
       <div class="kicker">Global</div>
       <h3 class="headline-minor">Russia Launches Nearly 1,000 Drones at Ukraine in Massive Overnight Barrage</h3>
-      <p style="font-size:12px">Moscow unleashed one of the largest single drone attacks of the war on Tuesday, killing at least seven people across multiple Ukrainian cities. The wave of nearly 1,000 drones marks a significant escalation in Russia's aerial campaign.</p>
+      <p class="story-body">Moscow unleashed one of the largest single drone attacks of the war on Tuesday, killing at least seven people across multiple Ukrainian cities. The wave of nearly 1,000 drones marks a significant escalation in Russia's aerial campaign.</p>
     </div>
     <div class="sidebar-item">
       <div class="kicker">Latin America</div>
       <h3 class="headline-minor">Thousands March in Buenos Aires on 50th Anniversary of 1976 Coup</h3>
-      <p style="font-size:12px">Massive crowds filled the streets of Argentina's capital to mark half a century since the U.S.-backed military coup that led to the "Dirty War," during which an estimated 30,000 people were forcibly disappeared.</p>
+      <p class="story-body">Massive crowds filled the streets of Argentina's capital to mark half a century since the U.S.-backed military coup that led to the "Dirty War," during which an estimated 30,000 people were forcibly disappeared.</p>
     </div>
     <div class="sidebar-item">
       <div class="kicker">Architecture</div>
       <h3 class="headline-minor">Chilean Architect Smiljan Radi&#263; Wins 2026 Pritzker Prize</h3>
-      <p style="font-size:12px">The prestigious Pritzker Architecture Prize was awarded to the Chilean architect known for his raw, poetic structures that blur the line between landscape and building.</p>
+      <p class="story-body">The prestigious Pritzker Architecture Prize was awarded to the Chilean architect known for his raw, poetic structures that blur the line between landscape and building.</p>
     </div>
   </div>
 </div>
@@ -254,22 +266,22 @@ body{
     <div class="kicker">Artificial Intelligence</div>
     <h3 class="headline-sub">AI Race Tightens: Top Models Within 1&ndash;2 Points on Major Benchmarks</h3>
     <div class="byline">Sebland Tech Desk</div>
-    <p style="font-size:12px;line-height:1.5">March 2026 benchmark results reveal an unprecedented convergence at the frontier. Claude Opus 4.6 leads SWE-bench Verified at 80.8% on real GitHub issues, while Google's Gemini 3.1 Pro claims the crown on ARC-AGI-2 abstract reasoning at 77.1%. GPT-5.4 remains competitive across the board.</p>
-    <p style="font-size:12px;line-height:1.5">The real story may be pricing: Gemini 3.1 Pro offers frontier performance at $2/$12 per million tokens, while costs across all providers dropped 40&ndash;80% year-over-year. Major labs now ship updates every 2&ndash;3 weeks. OpenAI plans to nearly double its workforce to 8,000 by year's end.</p>
+    <p class="story-body">March 2026 benchmark results reveal an unprecedented convergence at the frontier. Claude Opus 4.6 leads SWE-bench Verified at 80.8% on real GitHub issues, while Google's Gemini 3.1 Pro claims the crown on ARC-AGI-2 abstract reasoning at 77.1%. GPT-5.4 remains competitive across the board.</p>
+    <p class="story-body">The real story may be pricing: Gemini 3.1 Pro offers frontier performance at $2/$12 per million tokens, while costs across all providers dropped 40&ndash;80% year-over-year. Major labs now ship updates every 2&ndash;3 weeks. OpenAI plans to nearly double its workforce to 8,000 by year's end.</p>
   </div>
   <div class="secondary-story">
     <div class="kicker">Semiconductors</div>
     <h3 class="headline-sub">Musk Unveils $20B+ "Terafab" Chip Plant in Austin</h3>
     <div class="byline">Sebland Tech Desk</div>
-    <p style="font-size:12px;line-height:1.5">Elon Musk announced Terafab, a joint semiconductor fabrication facility developed by Tesla, SpaceX, and xAI. The $20 billion-plus Austin facility will manufacture custom chips optimized for electric vehicles, Optimus humanoid robots, and high-performance AI computing.</p>
-    <p style="font-size:12px;line-height:1.5">Meanwhile, Broadcom warned of supply constraints across the tech sector, including bottlenecks at TSMC, as demand for AI chips continues to outpace capacity. Nvidia confirmed it is restarting production of H200 AI processors for China after months of regulatory uncertainty.</p>
+    <p class="story-body">Elon Musk announced Terafab, a joint semiconductor fabrication facility developed by Tesla, SpaceX, and xAI. The $20 billion-plus Austin facility will manufacture custom chips optimized for electric vehicles, Optimus humanoid robots, and high-performance AI computing.</p>
+    <p class="story-body">Meanwhile, Broadcom warned of supply constraints across the tech sector, including bottlenecks at TSMC, as demand for AI chips continues to outpace capacity. Nvidia confirmed it is restarting production of H200 AI processors for China after months of regulatory uncertainty.</p>
   </div>
   <div class="secondary-story">
     <div class="kicker">Big Tech &amp; Law</div>
     <h3 class="headline-sub">Meta Ordered to Pay $375M Over Child Safety Failures</h3>
     <div class="byline">Sebland Tech Desk</div>
-    <p style="font-size:12px;line-height:1.5">A New Mexico jury ordered Meta to pay $375 million after finding the company liable for misleading users about platform safety and enabling the exploitation of minors. The case centered on allegations that Meta prioritized growth and profit while failing to adequately protect children on Facebook and Instagram.</p>
-    <p style="font-size:12px;line-height:1.5">In other Big Tech news, Amazon acquired Zurich-based robotics startup Rivr, known for its stair-climbing delivery robot. And U.S. prosecutors charged three people tied to Super Micro Computer in a scheme to divert AI technology to China through Southeast Asia.</p>
+    <p class="story-body">A New Mexico jury ordered Meta to pay $375 million after finding the company liable for misleading users about platform safety and enabling the exploitation of minors. The case centered on allegations that Meta prioritized growth and profit while failing to adequately protect children on Facebook and Instagram.</p>
+    <p class="story-body">In other Big Tech news, Amazon acquired Zurich-based robotics startup Rivr, known for its stair-climbing delivery robot. And U.S. prosecutors charged three people tied to Super Micro Computer in a scheme to divert AI technology to China through Southeast Asia.</p>
   </div>
 </div>
 
@@ -282,7 +294,7 @@ body{
   </div>
   <div class="entry">
     <div class="entry-label">Sources</div>
-    <p style="font-size:11px;color:#8A7E72">NPR &middot; CNN &middot; Al Jazeera &middot; UN News &middot; Democracy Now &middot; TechStartups &middot; TheStreet &middot; LLM-Stats &middot; ByteIota &middot; BuzzFeed</p>
+    <p class="story-body" style="color:#8A7E72">NPR &middot; CNN &middot; Al Jazeera &middot; UN News &middot; Democracy Now &middot; TechStartups &middot; TheStreet &middot; LLM-Stats &middot; ByteIota &middot; BuzzFeed</p>
   </div>
 </div>
 
