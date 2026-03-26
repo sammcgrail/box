@@ -454,7 +454,7 @@ function gameLoop(time) {
     ctx.font = '10px monospace';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = 'right';
-    ctx.fillText(fpsDisplay + ' fps', W - 4, 12);
+    ctx.fillText(fpsDisplay + ' fps', SCREEN_W - 4, 12);
     ctx.restore();
   } else if (gameState === 'title') {
     drawTitleBackground();
