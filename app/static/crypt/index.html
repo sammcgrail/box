@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>CRYPT</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #000; touch-action: none; }
 canvas { display: block; width: 100%; height: 100%; height: 100dvh; image-rendering: pixelated; image-rendering: crisp-edges; object-fit: cover; }
 #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -366,6 +366,10 @@ function setupInput() {
       else playerAttack();
     }
   });
+
+  // Prevent long-press magnifying glass / text selection on iOS
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
 }
 
 function setupTouchControls() {
@@ -505,21 +509,10 @@ function update(dt) {
   const cosA = Math.cos(playerAngle), sinA = Math.sin(playerAngle);
 
   if (isMobile) {
-    // Touch controls: joystick moves relative to facing direction
-    moveX = touchMoveX * cosA - touchMoveY * (-sinA);
-    moveY = touchMoveX * sinA - touchMoveY * (-cosA);
-    // Actually let's do it properly: forward is -Y on joystick
-    moveX = -touchMoveY * cosA + touchMoveX * (-sinA);
-    moveY = -touchMoveY * sinA + touchMoveX * cosA;
-    // Hmm, let me simplify. Up on joystick = forward
-    moveX = 0; moveY = 0;
+    // Touch joystick: up = forward, left/right = strafe
     if (Math.abs(touchMoveY) > 0.1 || Math.abs(touchMoveX) > 0.1) {
-      // Forward/back
-      moveX += -touchMoveY * cosA;
-      moveY += -touchMoveY * sinA;
-      // Strafe
-      moveX += touchMoveX * Math.cos(playerAngle + Math.PI/2);
-      moveY += touchMoveX * Math.sin(playerAngle + Math.PI/2);
+      moveX = -touchMoveY * cosA + touchMoveX * Math.cos(playerAngle + Math.PI/2);
+      moveY = -touchMoveY * sinA + touchMoveX * Math.sin(playerAngle + Math.PI/2);
     }
     playerAngle += touchLookDX;
     touchLookDX *= 0.8;
