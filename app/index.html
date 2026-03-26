@@ -52,7 +52,7 @@
         33% { filter: drop-shadow(0 0 30px rgba(168,85,247,0.7)) drop-shadow(0 0 70px rgba(244,114,182,0.4)); }
         66% { filter: drop-shadow(0 0 30px rgba(250,204,21,0.7)) drop-shadow(0 0 70px rgba(74,222,128,0.4)); }
       }
-      #shell-title { animation: g 8s linear infinite, glow 3s ease-in-out infinite; cursor: default; user-select: none; }
+      #shell-title { animation: g 8s linear infinite, glow 3s ease-in-out infinite; cursor: default; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
       /* Pre-rendered card grid */
       .shell-grid {
         display: grid;
@@ -189,6 +189,10 @@
           <a class="shell-card" href="/airhorn">
             <svg class="icon" style="color:#ff9900" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
             <div><div class="name">Airhorn</div><div class="desc">BWAAAAAAH</div></div>
+          </a>
+          <a class="shell-card" href="/crypt">
+            <svg class="icon" style="color:#8b0000" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>
+            <div><div class="name">Crypt</div><div class="desc">Raycaster dungeon</div></div>
           </a>
         </div>
       </div>
