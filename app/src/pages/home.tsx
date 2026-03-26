@@ -18,6 +18,7 @@ import {
   Target,
   Volume2,
   Skull,
+  Newspaper,
 } from "lucide-react";
 
 const apps = [
@@ -146,6 +147,13 @@ const apps = [
     href: "/crypt",
     icon: Skull,
     color: "#cc4444",
+  },
+  {
+    name: "The Dispatch",
+    desc: "AI-curated newspaper",
+    href: "/news",
+    icon: Newspaper,
+    color: "#D97757",
   },
 ];
 

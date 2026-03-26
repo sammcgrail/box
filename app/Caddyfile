@@ -259,6 +259,15 @@ sebland.com {
         reverse_proxy host.docker.internal:20002
     }
 
+    # news — The Sebland Dispatch newspaper
+    handle /news* {
+        uri strip_prefix /news
+        file_server {
+            root /srv/news
+        }
+        header Cache-Control "public, max-age=3600"
+    }
+
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
