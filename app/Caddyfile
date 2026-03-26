@@ -223,6 +223,19 @@ sebland.com {
         }
     }
 
+    # crypt — Raycaster Dungeon Crawler
+    @crypt_slash path /crypt/
+    redir @crypt_slash /crypt temporary
+    @crypt path /crypt /crypt/*
+    handle @crypt {
+        uri strip_prefix /crypt
+        root * /srv/crypt
+        try_files {path} /srv/crypt/index.html
+        file_server {
+            precompressed gzip
+        }
+    }
+
     # === ADMIN DASHBOARDS ===
 
     # netdata monitoring dashboard (basic auth protected)

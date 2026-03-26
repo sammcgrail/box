@@ -17,6 +17,7 @@ import {
   Atom,
   Target,
   Volume2,
+  Skull,
 } from "lucide-react";
 
 const apps = [
@@ -138,6 +139,13 @@ const apps = [
     href: "/airhorn",
     icon: Volume2,
     color: "#ff9900",
+  },
+  {
+    name: "Crypt",
+    desc: "Raycaster dungeon",
+    href: "/crypt",
+    icon: Skull,
+    color: "#cc4444",
   },
 ];
 

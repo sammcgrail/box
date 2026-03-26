@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>CRYPT</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+#ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#ui > * { pointer-events: auto; }
+#hud { position: absolute; bottom: 20px; left: 20px; color: #c44; font-family: 'Courier New', monospace; font-size: 16px; text-shadow: 0 0 8px #600; pointer-events: none; }
+#hud span { display: block; margin: 4px 0; }
+#message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f80; font-family: 'Courier New', monospace; font-size: 24px; text-shadow: 0 0 20px #f60; opacity: 0; transition: opacity 0.5s; pointer-events: none; text-align: center; }
+#title-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; z-index: 100; cursor: pointer; }
+#title-screen h1 { font-family: 'Courier New', monospace; font-size: 80px; color: #a33; text-shadow: 0 0 40px #600, 0 0 80px #400, 0 4px 0 #300; letter-spacing: 24px; animation: flicker 3s infinite; }
+#title-screen .sub { font-family: 'Courier New', monospace; font-size: 16px; color: #664; margin-top: 30px; animation: pulse 2s infinite; }
+#title-screen .hint { font-family: 'Courier New', monospace; font-size: 12px; color: #443; margin-top: 60px; }
+#death-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 100; cursor: pointer; }
+#death-screen h1 { font-family: 'Courier New', monospace; font-size: 60px; color: #a00; text-shadow: 0 0 40px #800; letter-spacing: 12px; }
+#death-screen .sub { font-family: 'Courier New', monospace; font-size: 18px; color: #644; margin-top: 20px; }
+#death-screen .hint { font-family: 'Courier New', monospace; font-size: 12px; color: #443; margin-top: 40px; }
+#touch-left { position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; display: none; pointer-events: auto; }
+#touch-right { position: absolute; bottom: 0; right: 0; width: 50%; height: 100%; display: none; pointer-events: auto; }
+#attack-btn { position: absolute; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: rgba(160,40,40,0.4); border: 2px solid rgba(160,40,40,0.6); display: none; pointer-events: auto; font-family: 'Courier New', monospace; font-size: 11px; color: #c66; text-align: center; line-height: 70px; }
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.6; }
+  94% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div id="hud">
+    <span id="health-display">VITAE: 100</span>
+    <span id="level-display">DEPTH: I</span>
+    <span id="kills-display">SLAIN: 0</span>
+  </div>
+  <div id="message"></div>
+  <div id="title-screen">
+    <h1>CRYPT</h1>
+    <div class="sub">DESCEND INTO DARKNESS</div>
+    <div class="hint">CLICK TO ENTER &mdash; WASD TO MOVE &mdash; MOUSE TO LOOK</div>
+    <div class="hint" style="margin-top:8px">FIND THE STAIRS. SURVIVE.</div>
+  </div>
+  <div id="death-screen">
+    <h1>PERISHED</h1>
+    <div class="sub" id="death-info"></div>
+    <div class="hint">CLICK TO DESCEND AGAIN</div>
+  </div>
+  <div id="touch-left"></div>
+  <div id="touch-right"></div>
+  <div id="attack-btn">STRIKE</div>
+</div>
+
+<script>
+'use strict';
+
+// ===== CONSTANTS =====
+const TILE_EMPTY = 0, TILE_WALL = 1, TILE_EXIT = 2;
+const SCREEN_W = 480, SCREEN_H = 320;
+const TEX_SIZE = 64;
+const FOV = Math.PI / 3;
+const MOVE_SPEED = 3.2;
+const ROT_SPEED = 2.5;
+const MOUSE_SENS = 0.003;
+const ENEMY_SPEED = 1.6;
+const ENEMY_DAMAGE = 8;
+const ATTACK_RANGE = 1.8;
+const ATTACK_DAMAGE = 35;
+const ATTACK_COOLDOWN = 0.4;
+const MAP_MIN = 16, MAP_MAX = 32;
+
+// ===== STATE =====
+let canvas, ctx, screenW, screenH;
+let gameState = 'title'; // title, playing, dead
+let level = 1, health = 100, kills = 0, totalKills = 0;
+let mapW, mapH, map, explored;
+let playerX, playerY, playerAngle;
+let enemies = [];
+let exitX, exitY;
+let attackTimer = 0, hurtTimer = 0, levelTransitionTimer = 0;
+let torchPhase = 0;
+let zBuffer = [];
+let textures = {};
+let keys = {};
+let lastTime = 0;
+let messageTimer = 0;
+let isMobile = false;
+let touchMoveX = 0, touchMoveY = 0, touchLookDX = 0;
+let touchMoveId = null, touchLookId = null;
+
+// ===== INIT =====
+function init() {
+  canvas = document.getElementById('game');
+  ctx = canvas.getContext('2d');
+  canvas.width = SCREEN_W;
+  canvas.height = SCREEN_H;
+
+  isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isMobile) {
+    document.getElementById('touch-left').style.display = 'block';
+    document.getElementById('touch-right').style.display = 'block';
+    document.getElementById('attack-btn').style.display = 'block';
+    setupTouchControls();
+  }
+
+  generateTextures();
+  setupInput();
+
+  document.getElementById('title-screen').addEventListener('click', startGame);
+  document.getElementById('title-screen').addEventListener('touchend', startGame);
+  document.getElementById('death-screen').addEventListener('click', () => { level = 1; totalKills = 0; startGame(); });
+  document.getElementById('death-screen').addEventListener('touchend', () => { level = 1; totalKills = 0; startGame(); });
+
+  drawTitleBackground();
+  requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('death-screen').style.display = 'none';
+  health = 100;
+  kills = 0;
+  generateLevel();
+  gameState = 'playing';
+  if (!isMobile) {
+    canvas.requestPointerLock();
+  }
+}
+
+// ===== TEXTURE GENERATION =====
+function generateTextures() {
+  textures.wall = generateWallTexture();
+  textures.wallDark = generateWallTexture(true);
+  textures.exit = generateExitTexture();
+  textures.floor = generateFloorTexture();
+}
+
+function generateWallTexture(dark) {
+  const c = document.createElement('canvas');
+  c.width = c.height = TEX_SIZE;
+  const x = c.getContext('2d');
+  // Stone base
+  for (let py = 0; py < TEX_SIZE; py++) {
+    for (let px = 0; px < TEX_SIZE; px++) {
+      const base = dark ? 30 : 50;
+      const noise = (Math.random() * 20 - 10) | 0;
+      const v = Math.max(10, Math.min(80, base + noise));
+      x.fillStyle = `rgb(${v},${v-5},${v-10})`;
+      x.fillRect(px, py, 1, 1);
+    }
+  }
+  // Brick pattern
+  x.strokeStyle = dark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.35)';
+  x.lineWidth = 1;
+  const brickH = 8;
+  for (let row = 0; row < TEX_SIZE / brickH; row++) {
+    const y = row * brickH;
+    x.beginPath(); x.moveTo(0, y); x.lineTo(TEX_SIZE, y); x.stroke();
+    const offset = (row % 2) * (TEX_SIZE / 4);
+    for (let col = 0; col < 4; col++) {
+      const bx = offset + col * (TEX_SIZE / 2);
+      x.beginPath(); x.moveTo(bx, y); x.lineTo(bx, y + brickH); x.stroke();
+    }
+  }
+  // Occasional moss/stain
+  for (let i = 0; i < 6; i++) {
+    const px = (Math.random() * TEX_SIZE) | 0;
+    const py = (Math.random() * TEX_SIZE) | 0;
+    const r = 2 + (Math.random() * 4) | 0;
+    x.fillStyle = Math.random() > 0.5 ? 'rgba(30,50,20,0.3)' : 'rgba(60,20,15,0.25)';
+    x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill();
+  }
+  return ctx.createImageData(1,1) && c; // return canvas
+}
+
+function generateExitTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = TEX_SIZE;
+  const x = c.getContext('2d');
+  // Dark archway
+  x.fillStyle = '#1a0a08';
+  x.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+  // Steps indication
+  for (let i = 0; i < 8; i++) {
+    const v = 20 + i * 3;
+    x.fillStyle = `rgb(${v},${v-4},${v-6})`;
+    x.fillRect(4 + i * 2, TEX_SIZE - 8 - i * 6, TEX_SIZE - 8 - i * 4, 6);
+  }
+  // Glow
+  const g = x.createRadialGradient(TEX_SIZE/2, TEX_SIZE/2, 2, TEX_SIZE/2, TEX_SIZE/2, TEX_SIZE/2);
+  g.addColorStop(0, 'rgba(200,100,30,0.3)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+  return c;
+}
+
+function generateFloorTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = TEX_SIZE;
+  const x = c.getContext('2d');
+  for (let py = 0; py < TEX_SIZE; py++) {
+    for (let px = 0; px < TEX_SIZE; px++) {
+      const v = 15 + (Math.random() * 12 - 6) | 0;
+      x.fillStyle = `rgb(${v},${v},${v+2})`;
+      x.fillRect(px, py, 1, 1);
+    }
+  }
+  return c;
+}
+
+// ===== MAZE GENERATION =====
+function generateLevel() {
+  const sizeScale = Math.min(level * 2 + 14, MAP_MAX);
+  mapW = sizeScale + ((Math.random() * 4) | 0);
+  mapH = sizeScale + ((Math.random() * 4) | 0);
+  if (mapW % 2 === 0) mapW++;
+  if (mapH % 2 === 0) mapH++;
+  mapW = Math.max(MAP_MIN + 1, Math.min(MAP_MAX + 1, mapW));
+  mapH = Math.max(MAP_MIN + 1, Math.min(MAP_MAX + 1, mapH));
+
+  map = new Uint8Array(mapW * mapH);
+  explored = new Uint8Array(mapW * mapH);
+  map.fill(TILE_WALL);
+
+  // Recursive backtracker
+  const cellW = ((mapW - 1) / 2) | 0;
+  const cellH = ((mapH - 1) / 2) | 0;
+  const visited = new Uint8Array(cellW * cellH);
+  const stack = [];
+  const startCX = 0, startCY = 0;
+  visited[startCY * cellW + startCX] = 1;
+  map[(startCY * 2 + 1) * mapW + (startCX * 2 + 1)] = TILE_EMPTY;
+  stack.push([startCX, startCY]);
+
+  const dirs = [[0,-1],[1,0],[0,1],[-1,0]];
+  while (stack.length > 0) {
+    const [cx, cy] = stack[stack.length - 1];
+    const neighbors = [];
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx >= 0 && nx < cellW && ny >= 0 && ny < cellH && !visited[ny * cellW + nx]) {
+        neighbors.push([nx, ny, dx, dy]);
+      }
+    }
+    if (neighbors.length === 0) {
+      stack.pop();
+      continue;
+    }
+    const [nx, ny, dx, dy] = neighbors[(Math.random() * neighbors.length) | 0];
+    visited[ny * cellW + nx] = 1;
+    // Carve passage
+    const wallX = cx * 2 + 1 + dx;
+    const wallY = cy * 2 + 1 + dy;
+    map[wallY * mapW + wallX] = TILE_EMPTY;
+    map[(ny * 2 + 1) * mapW + (nx * 2 + 1)] = TILE_EMPTY;
+    stack.push([nx, ny]);
+  }
+
+  // Add some extra passages for more open feel
+  const extraPassages = (cellW * cellH * 0.12) | 0;
+  for (let i = 0; i < extraPassages; i++) {
+    const wx = 2 + ((Math.random() * (mapW - 4)) | 0);
+    const wy = 2 + ((Math.random() * (mapH - 4)) | 0);
+    if (map[wy * mapW + wx] === TILE_WALL) {
+      // Check if removing this wall connects two passages
+      let adjEmpty = 0;
+      for (const [dx, dy] of dirs) {
+        if (map[(wy+dy) * mapW + (wx+dx)] === TILE_EMPTY) adjEmpty++;
+      }
+      if (adjEmpty >= 2) {
+        map[wy * mapW + wx] = TILE_EMPTY;
+      }
+    }
+  }
+
+  // Place player
+  playerX = 1.5;
+  playerY = 1.5;
+  playerAngle = 0;
+
+  // Place exit far from player
+  let bestDist = 0;
+  exitX = mapW - 2; exitY = mapH - 2;
+  for (let y = 1; y < mapH - 1; y++) {
+    for (let x = 1; x < mapW - 1; x++) {
+      if (map[y * mapW + x] === TILE_EMPTY) {
+        const d = Math.abs(x - 1) + Math.abs(y - 1);
+        if (d > bestDist) {
+          bestDist = d;
+          exitX = x; exitY = y;
+        }
+      }
+    }
+  }
+  map[exitY * mapW + exitX] = TILE_EXIT;
+
+  // Place enemies
+  enemies = [];
+  const enemyCount = Math.min(3 + level * 2, 25);
+  let attempts = 0;
+  while (enemies.length < enemyCount && attempts < 500) {
+    attempts++;
+    const ex = 1 + ((Math.random() * (mapW - 2)) | 0);
+    const ey = 1 + ((Math.random() * (mapH - 2)) | 0);
+    if (map[ey * mapW + ex] !== TILE_EMPTY) continue;
+    const distToPlayer = Math.hypot(ex - playerX, ey - playerY);
+    if (distToPlayer < 5) continue;
+    let tooClose = false;
+    for (const e of enemies) {
+      if (Math.hypot(e.x - ex, e.y - ey) < 2) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
+    enemies.push({
+      x: ex + 0.5, y: ey + 0.5,
+      hp: 30 + level * 10,
+      maxHp: 30 + level * 10,
+      state: 'patrol', // patrol, chase, hurt
+      dir: Math.random() * Math.PI * 2,
+      hurtTimer: 0,
+      patrolTimer: Math.random() * 3,
+      speed: ENEMY_SPEED + level * 0.1,
+      attackCooldown: 0
+    });
+  }
+
+  showMessage('DEPTH ' + toRoman(level));
+  updateHUD();
+}
+
+// ===== INPUT =====
+function setupInput() {
+  document.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space' && gameState === 'playing') {
+      e.preventDefault();
+      playerAttack();
+    }
+  });
+  document.addEventListener('keyup', e => { keys[e.code] = false; });
+  document.addEventListener('mousemove', e => {
+    if (gameState === 'playing' && document.pointerLockElement) {
+      playerAngle += e.movementX * MOUSE_SENS;
+    }
+  });
+  canvas.addEventListener('click', () => {
+    if (gameState === 'playing' && !isMobile) {
+      if (!document.pointerLockElement) canvas.requestPointerLock();
+      else playerAttack();
+    }
+  });
+}
+
+function setupTouchControls() {
+  const left = document.getElementById('touch-left');
+  const right = document.getElementById('touch-right');
+  const attackBtn = document.getElementById('attack-btn');
+
+  // Joystick
+  left.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    touchMoveId = t.identifier;
+    touchMoveX = 0; touchMoveY = 0;
+  }, {passive: false});
+  left.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchMoveId) {
+        const rect = left.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = (t.clientX - cx) / (rect.width / 2);
+        const dy = (t.clientY - cy) / (rect.height / 2);
+        const len = Math.hypot(dx, dy);
+        const maxLen = 1;
+        if (len > maxLen) {
+          touchMoveX = dx / len; touchMoveY = dy / len;
+        } else {
+          touchMoveX = dx; touchMoveY = dy;
+        }
+      }
+    }
+  }, {passive: false});
+  left.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchMoveId) {
+        touchMoveId = null; touchMoveX = 0; touchMoveY = 0;
+      }
+    }
+  });
+
+  // Look
+  let lastTouchX = 0;
+  right.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    touchLookId = t.identifier;
+    lastTouchX = t.clientX;
+    touchLookDX = 0;
+  }, {passive: false});
+  right.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchLookId) {
+        touchLookDX = (t.clientX - lastTouchX) * 0.008;
+        lastTouchX = t.clientX;
+      }
+    }
+  }, {passive: false});
+  right.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchLookId) {
+        touchLookId = null; touchLookDX = 0;
+      }
+    }
+  });
+
+  // Attack button
+  attackBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    playerAttack();
+  }, {passive: false});
+}
+
+// ===== GAME LOOP =====
+function gameLoop(time) {
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+
+  if (gameState === 'playing') {
+    update(dt);
+    render();
+  } else if (gameState === 'title') {
+    drawTitleBackground();
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+function update(dt) {
+  torchPhase += dt * 8;
+  if (messageTimer > 0) messageTimer -= dt;
+  if (attackTimer > 0) attackTimer -= dt;
+  if (hurtTimer > 0) hurtTimer -= dt;
+  if (levelTransitionTimer > 0) {
+    levelTransitionTimer -= dt;
+    if (levelTransitionTimer <= 0) {
+      level++;
+      generateLevel();
+    }
+    return;
+  }
+
+  // Player movement
+  let moveX = 0, moveY = 0;
+  const cosA = Math.cos(playerAngle), sinA = Math.sin(playerAngle);
+
+  if (isMobile) {
+    // Touch controls: joystick moves relative to facing direction
+    moveX = touchMoveX * cosA - touchMoveY * (-sinA);
+    moveY = touchMoveX * sinA - touchMoveY * (-cosA);
+    // Actually let's do it properly: forward is -Y on joystick
+    moveX = -touchMoveY * cosA + touchMoveX * (-sinA);
+    moveY = -touchMoveY * sinA + touchMoveX * cosA;
+    // Hmm, let me simplify. Up on joystick = forward
+    moveX = 0; moveY = 0;
+    if (Math.abs(touchMoveY) > 0.1 || Math.abs(touchMoveX) > 0.1) {
+      // Forward/back
+      moveX += -touchMoveY * cosA;
+      moveY += -touchMoveY * sinA;
+      // Strafe
+      moveX += touchMoveX * Math.cos(playerAngle + Math.PI/2);
+      moveY += touchMoveX * Math.sin(playerAngle + Math.PI/2);
+    }
+    playerAngle += touchLookDX;
+    touchLookDX *= 0.8;
+  } else {
+    if (keys['KeyW'] || keys['ArrowUp']) { moveX += cosA; moveY += sinA; }
+    if (keys['KeyS'] || keys['ArrowDown']) { moveX -= cosA; moveY -= sinA; }
+    if (keys['KeyA'] || keys['ArrowLeft']) { moveX += Math.cos(playerAngle - Math.PI/2); moveY += Math.sin(playerAngle - Math.PI/2); }
+    if (keys['KeyD'] || keys['ArrowRight']) { moveX += Math.cos(playerAngle + Math.PI/2); moveY += Math.sin(playerAngle + Math.PI/2); }
+  }
+
+  // Normalize movement
+  const moveLen = Math.hypot(moveX, moveY);
+  if (moveLen > 0) {
+    moveX = moveX / moveLen * MOVE_SPEED * dt;
+    moveY = moveY / moveLen * MOVE_SPEED * dt;
+    // Collision with sliding
+    const r = 0.2;
+    const newX = playerX + moveX;
+    const newY = playerY + moveY;
+    if (!isWall(newX + r, playerY) && !isWall(newX - r, playerY) &&
+        !isWall(newX + r, playerY + r) && !isWall(newX - r, playerY - r) &&
+        !isWall(newX + r, playerY - r) && !isWall(newX - r, playerY + r)) {
+      playerX = newX;
+    }
+    if (!isWall(playerX, newY + r) && !isWall(playerX, newY - r) &&
+        !isWall(playerX + r, newY + r) && !isWall(playerX - r, newY - r) &&
+        !isWall(playerX + r, newY - r) && !isWall(playerX - r, newY + r)) {
+      playerY = newY;
+    }
+  }
+
+  // Explore minimap
+  const ex = playerX | 0, ey = playerY | 0;
+  for (let dy = -3; dy <= 3; dy++) {
+    for (let dx = -3; dx <= 3; dx++) {
+      const mx = ex + dx, my = ey + dy;
+      if (mx >= 0 && mx < mapW && my >= 0 && my < mapH) {
+        explored[my * mapW + mx] = 1;
+      }
+    }
+  }
+
+  // Check exit
+  if (Math.abs(playerX - (exitX + 0.5)) < 0.6 && Math.abs(playerY - (exitY + 0.5)) < 0.6) {
+    showMessage('DESCENDING DEEPER...');
+    levelTransitionTimer = 1.5;
+    return;
+  }
+
+  // Update enemies
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    if (e.hurtTimer > 0) { e.hurtTimer -= dt; continue; }
+    if (e.attackCooldown > 0) e.attackCooldown -= dt;
+
+    const distToPlayer = Math.hypot(e.x - playerX, e.y - playerY);
+
+    // Check line of sight
+    let canSee = false;
+    if (distToPlayer < 12) {
+      canSee = hasLineOfSight(e.x, e.y, playerX, playerY);
+    }
+
+    if (canSee) {
+      e.state = 'chase';
+    } else if (e.state === 'chase' && distToPlayer > 8) {
+      e.state = 'patrol';
+    }
+
+    if (e.state === 'chase') {
+      // Move toward player
+      const angle = Math.atan2(playerY - e.y, playerX - e.x);
+      const spd = e.speed * dt;
+      const nx = e.x + Math.cos(angle) * spd;
+      const ny = e.y + Math.sin(angle) * spd;
+      if (!isWall(nx, ny) && !isWall(nx + 0.15, ny + 0.15) && !isWall(nx - 0.15, ny - 0.15)) {
+        e.x = nx; e.y = ny;
+      }
+
+      // Attack player
+      if (distToPlayer < 0.8 && e.attackCooldown <= 0) {
+        health -= ENEMY_DAMAGE + ((level - 1) * 2);
+        hurtTimer = 0.3;
+        e.attackCooldown = 1.0;
+        if (health <= 0) {
+          health = 0;
+          gameState = 'dead';
+          document.getElementById('death-info').textContent = 'REACHED DEPTH ' + toRoman(level) + ' \u2014 ' + totalKills + ' SOULS CLAIMED';
+          document.getElementById('death-screen').style.display = 'flex';
+          if (document.pointerLockElement) document.exitPointerLock();
+        }
+        updateHUD();
+      }
+    } else {
+      // Patrol
+      e.patrolTimer -= dt;
+      if (e.patrolTimer <= 0) {
+        e.dir = Math.random() * Math.PI * 2;
+        e.patrolTimer = 1 + Math.random() * 3;
+      }
+      const spd = e.speed * 0.4 * dt;
+      const nx = e.x + Math.cos(e.dir) * spd;
+      const ny = e.y + Math.sin(e.dir) * spd;
+      if (!isWall(nx, ny) && !isWall(nx + 0.15, ny + 0.15) && !isWall(nx - 0.15, ny - 0.15)) {
+        e.x = nx; e.y = ny;
+      } else {
+        e.dir = Math.random() * Math.PI * 2;
+      }
+    }
+  }
+}
+
+function playerAttack() {
+  if (attackTimer > 0 || gameState !== 'playing') return;
+  attackTimer = ATTACK_COOLDOWN;
+
+  // Find closest enemy in front
+  let bestDist = ATTACK_RANGE;
+  let bestEnemy = null;
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    const dx = e.x - playerX, dy = e.y - playerY;
+    const dist = Math.hypot(dx, dy);
+    if (dist > ATTACK_RANGE) continue;
+    // Check if roughly in front
+    const angleToEnemy = Math.atan2(dy, dx);
+    let angleDiff = angleToEnemy - playerAngle;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    if (Math.abs(angleDiff) < FOV / 2 && dist < bestDist) {
+      bestDist = dist;
+      bestEnemy = e;
+    }
+  }
+
+  if (bestEnemy) {
+    bestEnemy.hp -= ATTACK_DAMAGE;
+    bestEnemy.hurtTimer = 0.2;
+    if (bestEnemy.hp <= 0) {
+      kills++;
+      totalKills++;
+      updateHUD();
+    }
+  }
+}
+
+// ===== RENDERING =====
+function render() {
+  const imgData = ctx.createImageData(SCREEN_W, SCREEN_H);
+  const pixels = imgData.data;
+  zBuffer.length = SCREEN_W;
+
+  const torchFlicker = 0.92 + Math.sin(torchPhase) * 0.04 + Math.sin(torchPhase * 1.7) * 0.03 + Math.sin(torchPhase * 3.1) * 0.01;
+
+  // Cast rays for walls
+  for (let x = 0; x < SCREEN_W; x++) {
+    const cameraX = 2 * x / SCREEN_W - 1;
+    const rayAngle = playerAngle + Math.atan(cameraX * Math.tan(FOV / 2));
+    const rayDirX = Math.cos(rayAngle);
+    const rayDirY = Math.sin(rayAngle);
+
+    // DDA
+    let mapX = playerX | 0, mapY = playerY | 0;
+    const deltaDistX = Math.abs(1 / rayDirX);
+    const deltaDistY = Math.abs(1 / rayDirY);
+    let stepX, stepY, sideDistX, sideDistY;
+
+    if (rayDirX < 0) { stepX = -1; sideDistX = (playerX - mapX) * deltaDistX; }
+    else { stepX = 1; sideDistX = (mapX + 1 - playerX) * deltaDistX; }
+    if (rayDirY < 0) { stepY = -1; sideDistY = (playerY - mapY) * deltaDistY; }
+    else { stepY = 1; sideDistY = (mapY + 1 - playerY) * deltaDistY; }
+
+    let side = 0, hit = 0, tileType = 0;
+    for (let i = 0; i < 64; i++) {
+      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; }
+      else { sideDistY += deltaDistY; mapY += stepY; side = 1; }
+      if (mapX < 0 || mapX >= mapW || mapY < 0 || mapY >= mapH) break;
+      const tile = map[mapY * mapW + mapX];
+      if (tile !== TILE_EMPTY) { hit = 1; tileType = tile; break; }
+    }
+
+    let perpDist;
+    if (side === 0) perpDist = (mapX - playerX + (1 - stepX) / 2) / rayDirX;
+    else perpDist = (mapY - playerY + (1 - stepY) / 2) / rayDirY;
+    perpDist = Math.max(perpDist, 0.01);
+
+    // Fix fisheye
+    const correctedDist = perpDist * Math.cos(rayAngle - playerAngle);
+    zBuffer[x] = correctedDist;
+
+    if (hit) {
+      const lineHeight = (SCREEN_H / correctedDist) | 0;
+      let drawStart = ((SCREEN_H - lineHeight) / 2) | 0;
+      let drawEnd = ((SCREEN_H + lineHeight) / 2) | 0;
+
+      // Texture mapping
+      let wallX;
+      if (side === 0) wallX = playerY + perpDist * rayDirY;
+      else wallX = playerX + perpDist * rayDirX;
+      wallX -= Math.floor(wallX);
+
+      const texX = (wallX * TEX_SIZE) | 0;
+      let tex;
+      if (tileType === TILE_EXIT) tex = textures.exit;
+      else tex = side === 1 ? textures.wallDark : textures.wall;
+
+      const texCtx = tex.getContext('2d');
+      const texData = texCtx.getImageData(0, 0, TEX_SIZE, TEX_SIZE).data;
+
+      // Lighting
+      const fogDist = correctedDist;
+      const lightFactor = Math.max(0, Math.min(1, torchFlicker / (1 + fogDist * fogDist * 0.06)));
+      const sideFactor = side === 1 ? 0.7 : 1.0;
+
+      const clampStart = Math.max(0, drawStart);
+      const clampEnd = Math.min(SCREEN_H - 1, drawEnd);
+
+      for (let y = clampStart; y <= clampEnd; y++) {
+        const texY = (((y - drawStart) * TEX_SIZE / lineHeight) | 0) & (TEX_SIZE - 1);
+        const ti = (texY * TEX_SIZE + texX) * 4;
+        const light = lightFactor * sideFactor;
+        const idx = (y * SCREEN_W + x) * 4;
+        pixels[idx] = (texData[ti] * light) | 0;
+        pixels[idx+1] = (texData[ti+1] * light) | 0;
+        pixels[idx+2] = (texData[ti+2] * light) | 0;
+        pixels[idx+3] = 255;
+      }
+
+      // Floor and ceiling
+      for (let y = clampEnd + 1; y < SCREEN_H; y++) {
+        const floorDist = SCREEN_H / (2 * y - SCREEN_H);
+        const fl = Math.max(0, Math.min(1, torchFlicker / (1 + floorDist * floorDist * 0.08)));
+        const v = (18 * fl) | 0;
+        const idx = (y * SCREEN_W + x) * 4;
+        pixels[idx] = v; pixels[idx+1] = v; pixels[idx+2] = (v + 2) | 0; pixels[idx+3] = 255;
+      }
+      for (let y = 0; y < clampStart; y++) {
+        const ceilDist = SCREEN_H / (SCREEN_H - 2 * y);
+        const fl = Math.max(0, Math.min(1, torchFlicker / (1 + ceilDist * ceilDist * 0.1)));
+        const v = (10 * fl) | 0;
+        const idx = (y * SCREEN_W + x) * 4;
+        pixels[idx] = v; pixels[idx+1] = v; pixels[idx+2] = v; pixels[idx+3] = 255;
+      }
+    } else {
+      // No wall hit — draw floor/ceiling
+      for (let y = 0; y < SCREEN_H; y++) {
+        const idx = (y * SCREEN_W + x) * 4;
+        const v = y > SCREEN_H / 2 ? 8 : 4;
+        pixels[idx] = v; pixels[idx+1] = v; pixels[idx+2] = v; pixels[idx+3] = 255;
+      }
+      zBuffer[x] = 999;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  // Draw sprites (enemies)
+  renderSprites();
+
+  // Attack flash
+  if (attackTimer > ATTACK_COOLDOWN - 0.1) {
+    ctx.fillStyle = 'rgba(255,200,100,0.15)';
+    ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+    // Sword slash effect
+    ctx.strokeStyle = 'rgba(200,200,200,0.6)';
+    ctx.lineWidth = 3;
+    const t = 1 - (attackTimer - (ATTACK_COOLDOWN - 0.1)) / 0.1;
+    ctx.beginPath();
+    ctx.arc(SCREEN_W / 2, SCREEN_H * 0.7, 60, Math.PI * (1.2 - t * 0.5), Math.PI * (1.2 + t * 0.5));
+    ctx.stroke();
+  }
+
+  // Hurt vignette
+  if (hurtTimer > 0) {
+    const alpha = hurtTimer / 0.3 * 0.6;
+    ctx.fillStyle = `rgba(180,0,0,${alpha})`;
+    ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  }
+
+  // Level transition
+  if (levelTransitionTimer > 0) {
+    const alpha = 1 - levelTransitionTimer / 1.5;
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  }
+
+  // Minimap
+  drawMinimap();
+
+  // Crosshair
+  ctx.strokeStyle = 'rgba(180,80,60,0.5)';
+  ctx.lineWidth = 1;
+  const cx = SCREEN_W / 2, cy = SCREEN_H / 2;
+  ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx - 2, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 2, cy); ctx.lineTo(cx + 6, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy - 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy + 2); ctx.lineTo(cx, cy + 6); ctx.stroke();
+
+  // Message
+  if (messageTimer > 0) {
+    const el = document.getElementById('message');
+    el.style.opacity = Math.min(1, messageTimer * 2);
+  }
+
+  // Weapon (simple fist/dagger)
+  drawWeapon();
+}
+
+function renderSprites() {
+  // Sort enemies by distance (far to near)
+  const spriteList = [];
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    const dist = Math.hypot(e.x - playerX, e.y - playerY);
+    spriteList.push({e, dist});
+  }
+  spriteList.sort((a, b) => b.dist - a.dist);
+
+  for (const {e, dist} of spriteList) {
+    const dx = e.x - playerX;
+    const dy = e.y - playerY;
+
+    // Transform to camera space
+    const angle = Math.atan2(dy, dx) - playerAngle;
+    let normAngle = angle;
+    while (normAngle > Math.PI) normAngle -= Math.PI * 2;
+    while (normAngle < -Math.PI) normAngle += Math.PI * 2;
+
+    if (Math.abs(normAngle) > FOV * 0.7) continue;
+
+    const screenX = (SCREEN_W / 2) * (1 + Math.tan(normAngle) / Math.tan(FOV / 2));
+    const spriteHeight = (SCREEN_H / dist) * 0.7;
+    const spriteWidth = spriteHeight * 0.8;
+
+    const drawStartX = (screenX - spriteWidth / 2) | 0;
+    const drawEndX = (screenX + spriteWidth / 2) | 0;
+    const drawStartY = ((SCREEN_H - spriteHeight) / 2) | 0;
+    const drawEndY = ((SCREEN_H + spriteHeight) / 2) | 0;
+
+    // Lighting
+    const torchFlicker = 0.92 + Math.sin(torchPhase) * 0.04;
+    const lightFactor = Math.max(0.05, Math.min(1, torchFlicker / (1 + dist * dist * 0.06)));
+
+    // Draw skull sprite
+    const isHurt = e.hurtTimer > 0;
+    for (let sx = Math.max(0, drawStartX); sx < Math.min(SCREEN_W, drawEndX); sx++) {
+      if (dist > zBuffer[sx]) continue;
+
+      const texX = ((sx - drawStartX) / spriteWidth * 16) | 0;
+      for (let sy = Math.max(0, drawStartY); sy < Math.min(SCREEN_H, drawEndY); sy++) {
+        const texY = ((sy - drawStartY) / spriteHeight * 16) | 0;
+        const pixel = getSkullPixel(texX, texY, isHurt, e.state === 'chase');
+        if (pixel) {
+          ctx.fillStyle = `rgb(${(pixel[0] * lightFactor)|0},${(pixel[1] * lightFactor)|0},${(pixel[2] * lightFactor)|0})`;
+          ctx.fillRect(sx, sy, 1, 1);
+        }
+      }
+    }
+
+    // Health bar for damaged enemies
+    if (e.hp < e.maxHp && e.hp > 0) {
+      const barW = spriteWidth * 0.8;
+      const barH = 3;
+      const barX = screenX - barW / 2;
+      const barY = drawStartY - 6;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = `rgb(${180 - (e.hp/e.maxHp)*120|0},${(e.hp/e.maxHp)*60|0},0)`;
+      ctx.fillRect(barX, barY, barW * (e.hp / e.maxHp), barH);
+    }
+  }
+}
+
+// Procedural skull sprite 16x16
+function getSkullPixel(x, y, hurt, chasing) {
+  // Skull bitmap (16x16)
+  const skull = [
+    '................',
+    '....XXXXXXXX....',
+    '...XXXXXXXXXX...',
+    '..XXXXXXXXXXXX..',
+    '..XXXXXXXXXXXX..',
+    '..XXX.XX.XXXXX..',
+    '..XX..XX..XXXX..',
+    '..XX..XX..XXXX..',
+    '..XXX.XX.XXXXX..',
+    '..XXXXXXXXXXXX..',
+    '...XXXX..XXXX...',
+    '...XX.XXXX.XX...',
+    '....X.X..X.X....',
+    '....XXXXXXXX....',
+    '.....XXXXXX.....',
+    '................',
+  ];
+  if (y < 0 || y >= 16 || x < 0 || x >= 16) return null;
+  const row = skull[y];
+  if (!row || row[x] === '.') return null;
+
+  // Check for eye sockets
+  const isEye = (y >= 5 && y <= 7 && ((x >= 4 && x <= 5) || (x >= 8 && x <= 9)));
+  if (isEye) {
+    if (chasing) return [200, 40, 20]; // Red glowing eyes when chasing
+    return [20, 10, 10]; // Dark eye sockets
+  }
+
+  // Nose area
+  const isNose = (y === 9 && (x === 6 || x === 7));
+  if (isNose) return [40, 30, 25];
+
+  // Teeth area
+  const isTeeth = (y >= 11 && y <= 12 && x >= 4 && x <= 11);
+  if (isTeeth) {
+    if ((x + y) % 2 === 0) return hurt ? [200, 100, 100] : [180, 170, 150];
+    return [40, 30, 25];
+  }
+
+  // Bone color with variation
+  const base = hurt ? 220 : 190;
+  const v = base + ((x * 7 + y * 13) % 20) - 10;
+  if (hurt) return [v, v * 0.5, v * 0.5];
+  return [v, v * 0.92, v * 0.82];
+}
+
+function drawWeapon() {
+  // Simple dagger/blade
+  const bobX = Math.sin(torchPhase * 0.5) * 3;
+  const bobY = Math.abs(Math.cos(torchPhase * 0.5)) * 4;
+  const baseX = SCREEN_W * 0.65 + bobX;
+  const baseY = SCREEN_H * 0.75 + bobY;
+
+  let swingOffset = 0;
+  if (attackTimer > 0) {
+    swingOffset = Math.sin((1 - attackTimer / ATTACK_COOLDOWN) * Math.PI) * 40;
+  }
+
+  // Handle
+  ctx.fillStyle = '#3a2518';
+  ctx.fillRect(baseX - swingOffset * 0.3, baseY + 10, 8, 40);
+
+  // Guard
+  ctx.fillStyle = '#555';
+  ctx.fillRect(baseX - 8 - swingOffset * 0.3, baseY + 8, 24, 5);
+
+  // Blade
+  ctx.fillStyle = '#888';
+  ctx.beginPath();
+  ctx.moveTo(baseX - swingOffset * 0.5, baseY + 8);
+  ctx.lineTo(baseX + 4 - swingOffset * 0.5, baseY + 8);
+  ctx.lineTo(baseX + 2 - swingOffset * 0.8, baseY - 50 + swingOffset);
+  ctx.closePath();
+  ctx.fill();
+
+  // Blade edge highlight
+  ctx.fillStyle = 'rgba(200,200,210,0.4)';
+  ctx.beginPath();
+  ctx.moveTo(baseX - swingOffset * 0.5, baseY + 8);
+  ctx.lineTo(baseX + 2 - swingOffset * 0.5, baseY + 8);
+  ctx.lineTo(baseX + 1 - swingOffset * 0.8, baseY - 50 + swingOffset);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawMinimap() {
+  const mapScale = 3;
+  const mapDisplaySize = 80;
+  const mapOffX = SCREEN_W - mapDisplaySize - 10;
+  const mapOffY = 10;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(mapOffX - 2, mapOffY - 2, mapDisplaySize + 4, mapDisplaySize + 4);
+
+  const viewRange = (mapDisplaySize / mapScale / 2) | 0;
+  const startX = (playerX | 0) - viewRange;
+  const startY = (playerY | 0) - viewRange;
+
+  for (let dy = 0; dy < mapDisplaySize / mapScale; dy++) {
+    for (let dx = 0; dx < mapDisplaySize / mapScale; dx++) {
+      const mx = startX + dx, my = startY + dy;
+      if (mx < 0 || mx >= mapW || my < 0 || my >= mapH) continue;
+      if (!explored[my * mapW + mx]) continue;
+
+      const px = mapOffX + dx * mapScale;
+      const py = mapOffY + dy * mapScale;
+      const tile = map[my * mapW + mx];
+
+      if (tile === TILE_WALL) {
+        ctx.fillStyle = '#333';
+      } else if (tile === TILE_EXIT) {
+        ctx.fillStyle = '#c60';
+      } else {
+        ctx.fillStyle = '#1a1a1a';
+      }
+      ctx.fillRect(px, py, mapScale, mapScale);
+    }
+  }
+
+  // Player dot
+  const pdx = (playerX - startX) * mapScale + mapOffX;
+  const pdy = (playerY - startY) * mapScale + mapOffY;
+  ctx.fillStyle = '#0f0';
+  ctx.fillRect(pdx - 1, pdy - 1, 3, 3);
+
+  // Direction indicator
+  ctx.strokeStyle = '#0f0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pdx, pdy);
+  ctx.lineTo(pdx + Math.cos(playerAngle) * 5, pdy + Math.sin(playerAngle) * 5);
+  ctx.stroke();
+
+  // Enemy dots
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    const edx = (e.x - startX) * mapScale + mapOffX;
+    const edy = (e.y - startY) * mapScale + mapOffY;
+    if (edx < mapOffX || edx > mapOffX + mapDisplaySize) continue;
+    if (edy < mapOffY || edy > mapOffY + mapDisplaySize) continue;
+    // Only show if explored
+    const emx = e.x | 0, emy = e.y | 0;
+    if (emx >= 0 && emx < mapW && emy >= 0 && emy < mapH && explored[emy * mapW + emx]) {
+      const dist = Math.hypot(e.x - playerX, e.y - playerY);
+      if (dist < 8) {
+        ctx.fillStyle = '#c00';
+        ctx.fillRect(edx - 1, edy - 1, 2, 2);
+      }
+    }
+  }
+
+  // Border
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mapOffX - 2, mapOffY - 2, mapDisplaySize + 4, mapDisplaySize + 4);
+}
+
+function drawTitleBackground() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+  // Atmospheric noise
+  const t = Date.now() * 0.001;
+  for (let i = 0; i < 200; i++) {
+    const x = (Math.sin(i * 7.3 + t * 0.5) * 0.5 + 0.5) * SCREEN_W;
+    const y = (Math.cos(i * 3.7 + t * 0.3) * 0.5 + 0.5) * SCREEN_H;
+    const a = 0.02 + Math.sin(i + t) * 0.01;
+    ctx.fillStyle = `rgba(100,40,20,${a})`;
+    ctx.fillRect(x, y, 2, 2);
+  }
+}
+
+// ===== UTILITIES =====
+function isWall(x, y) {
+  const mx = x | 0, my = y | 0;
+  if (mx < 0 || mx >= mapW || my < 0 || my >= mapH) return true;
+  return map[my * mapW + mx] === TILE_WALL;
+}
+
+function hasLineOfSight(x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const dist = Math.hypot(dx, dy);
+  const steps = (dist * 3) | 0;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = x1 + dx * t;
+    const y = y1 + dy * t;
+    if (isWall(x, y)) return false;
+  }
+  return true;
+}
+
+function showMessage(text) {
+  const el = document.getElementById('message');
+  el.textContent = text;
+  el.style.opacity = 1;
+  messageTimer = 2;
+  setTimeout(() => { el.style.opacity = 0; }, 1500);
+}
+
+function updateHUD() {
+  document.getElementById('health-display').textContent = 'VITAE: ' + Math.max(0, health);
+  document.getElementById('level-display').textContent = 'DEPTH: ' + toRoman(level);
+  document.getElementById('kills-display').textContent = 'SLAIN: ' + totalKills;
+
+  // Color health based on value
+  const hel = document.getElementById('health-display');
+  if (health > 60) hel.style.color = '#c44';
+  else if (health > 30) hel.style.color = '#c80';
+  else hel.style.color = '#f22';
+}
+
+function toRoman(num) {
+  const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+  const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+  let result = '';
+  for (let i = 0; i < vals.length; i++) {
+    while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+  }
+  return result;
+}
+
+// ===== START =====
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
