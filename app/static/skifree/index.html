@@ -46,7 +46,7 @@ canvas {
 <body>
 <canvas id="game"></canvas>
 <button id="fast-btn">F</button>
-<div id="version">v1.6.2</div>
+<div id="version">v1.6.3</div>
 <script>
 (function() {
 'use strict';
@@ -755,9 +755,10 @@ function updateGame() {
     }
   }
 
-  // Spawn obstacles
+  // Spawn obstacles — batch in chunks of at least 40px to avoid
+  // Math.floor(tinyChunk * density) = 0 at high frame rates (240fps+)
   var spawnAhead = game.cameraY + GAME_H + 300;
-  if (spawnAhead > game.obstacleSpawnY) {
+  if (spawnAhead > game.obstacleSpawnY + 40) {
     spawnObstacles(game.obstacleSpawnY, spawnAhead);
     game.obstacleSpawnY = spawnAhead;
   }
