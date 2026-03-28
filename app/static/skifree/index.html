@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SkiFree</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  background: #000;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+#fast-btn {
+  display: none;
+  position: fixed;
+  bottom: 20px; right: 20px;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(255,0,0,0.5);
+  border: 3px solid rgba(255,255,255,0.6);
+  color: #fff;
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: bold;
+  z-index: 100;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+}
+#fast-btn:active { background: rgba(255,0,0,0.8); }
+#version {
+  position: fixed; bottom: 2px; right: 6px; z-index: 200;
+  font-family: monospace; font-size: 8px;
+  color: rgba(255,255,255,0.25); pointer-events: none;
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<button id="fast-btn">F</button>
+<div id="version">v1.6.0</div>
+<script>
+(function() {
+'use strict';
+
+// ============================================================
+// SKIFREE — Pixel-accurate recreation
+// Original by Chris Pirih, 1991
+// ============================================================
+
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var fastBtn = document.getElementById('fast-btn');
+var isMobile = 'ontouchstart' in window;
+
+// Game constants
+var GAME_W = 640;
+var GAME_H = 480;
+var SCALE = 1;
+
+// Colors matching original Windows 3.1 16-color palette
+var COL_SNOW = '#FFFFFF';
+var COL_TREE_GREEN = '#008000';
+var COL_TREE_DARK = '#004000';
+var COL_TREE_TRUNK = '#804000';
+var COL_ROCK = '#808080';
+var COL_ROCK_DARK = '#404040';
+var COL_ROCK_LIGHT = '#C0C0C0';
+var COL_SKIER = '#000000';
+var COL_SKIER_JACKET = '#FF00FF'; // Magenta — original SkiFree color
+var COL_SKIER_PANTS = '#000080';  // Dark navy
+var COL_POLE = '#808080';
+var COL_RAMP_RED = '#FF0000';
+var COL_RAMP_GREEN = '#00FF00';
+var COL_RAMP_BLUE = '#0000FF';
+var COL_RAMP_YELLOW = '#FFFF00';
+var COL_FLAG_RED = '#FF0000';
+var COL_FLAG_BLUE = '#0000FF';
+var COL_YETI_BODY = '#606060';    // Dark gray — original yeti color
+var COL_YETI_OUTLINE = '#303030'; // Dark outline
+var COL_YETI_FUR = '#505050';     // Fur texture
+var COL_DOG = '#804000';
+var COL_STUMP = '#804000';
+var COL_BOARDER = '#000080';
+
+// Skier states
+var SKIER_DOWN = 0;
+var SKIER_DOWN_LEFT = 1;
+var SKIER_LEFT = 2;
+var SKIER_FAR_LEFT = 3;
+var SKIER_DOWN_RIGHT = 4;
+var SKIER_RIGHT = 5;
+var SKIER_FAR_RIGHT = 6;
+var SKIER_CRASH = 7;
+var SKIER_JUMP = 8;
+var SKIER_EATEN = 9;
+
+// Game state
+var game = {
+  running: false,
+  paused: false,
+  started: false,
+  distance: 0,
+  speed: 0,
+  fastSpeed: 12,
+  normalMaxSpeed: 8,
+  style: 0,
+  time: 0,
+  skierX: 0,
+  skierY: 0,
+  skierState: SKIER_DOWN,
+  skierVx: 0,
+  skierVy: 0,
+  cameraY: 0,
+  obstacles: [],
+  obstacleSpawnY: 0,
+  yeti: null,
+  yetiActive: false,
+  yetiEating: false,
+  yetiEatTimer: 0,
+  jumpTimer: 0,
+  jumping: false,
+  jumpHeight: 0,
+  crashTimer: 0,
+  crashed: false,
+  fastMode: false,
+  keys: {},
+  touchX: null,
+  frame: 0,
+  gameOver: false,
+  showInstructions: true,
+  instructionTimer: 0,
+  // Ski tracks
+  tracks: [],
+  lastTrackY: 0,
+  displayScale: 1,
+  lastTime: 0,
+  dt: 1/60
+};
+
+// Show fast button on mobile
+if (isMobile) {
+  fastBtn.style.display = 'block';
+}
+
+// ============================================================
+// RESIZE
+// ============================================================
+
+function resize() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+
+  // Always render at SCALE=1 internally — CSS handles display scaling
+  // This keeps all text and sprites pixel-crisp
+  SCALE = 1;
+
+  // On tall (portrait) screens, expand logical game height to fill
+  var displayScale = w / GAME_W;
+  if (w < h) {
+    // Portrait — match width, extend height
+    GAME_H = Math.floor(h / displayScale);
+  } else {
+    // Landscape — standard aspect
+    GAME_H = 480;
+    displayScale = Math.min(w / GAME_W, h / GAME_H);
+  }
+
+  // Canvas internal resolution = logical game size (1:1 pixels)
+  canvas.width = GAME_W;
+  canvas.height = GAME_H;
+
+  // CSS scales it to fill the screen — image-rendering: pixelated keeps it crisp
+  var cssW = Math.floor(GAME_W * displayScale);
+  var cssH = Math.floor(GAME_H * displayScale);
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left = Math.floor((w - cssW) / 2) + 'px';
+  canvas.style.top = Math.floor((h - cssH) / 2) + 'px';
+  ctx.imageSmoothingEnabled = false;
+
+  // Store display scale for touch coordinate conversion
+  game.displayScale = displayScale;
+}
+
+// ============================================================
+// SPRITE DRAWING
+// ============================================================
+
+function drawPixel(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.floor(x * SCALE), Math.floor(y * SCALE), Math.ceil(SCALE), Math.ceil(SCALE));
+}
+
+function drawRect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.floor(x * SCALE), Math.floor(y * SCALE), Math.ceil(w * SCALE), Math.ceil(h * SCALE));
+}
+
+// --- SKIER ---
+function drawSkier(sx, sy, state) {
+  var x = Math.round(sx);
+  var y = Math.round(sy);
+
+  if (game.jumping) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse((x + 8) * SCALE, (y + 18 + game.jumpHeight * 0.3) * SCALE, 5 * SCALE, 2 * SCALE, 0, 0, Math.PI * 2);
+    ctx.fill();
+    y -= game.jumpHeight;
+  }
+
+  switch(state) {
+    case SKIER_DOWN:
+      drawRect(x+6, y, 4, 3, COL_SKIER);         // head
+      drawRect(x+6, y+3, 4, 5, COL_SKIER_JACKET); // jacket
+      drawRect(x+2, y+4, 4, 1, COL_SKIER);        // left arm
+      drawRect(x+10, y+4, 4, 1, COL_SKIER);       // right arm
+      drawRect(x+2, y+4, 1, 9, COL_POLE);         // left pole
+      drawRect(x+13, y+4, 1, 9, COL_POLE);        // right pole
+      drawRect(x+6, y+8, 2, 4, COL_SKIER_PANTS);  // left leg
+      drawRect(x+8, y+8, 2, 4, COL_SKIER_PANTS);  // right leg
+      drawRect(x+4, y+12, 2, 5, COL_SKIER);       // left ski
+      drawRect(x+10, y+12, 2, 5, COL_SKIER);      // right ski
+      break;
+
+    case SKIER_DOWN_LEFT:
+      drawRect(x+5, y, 4, 3, COL_SKIER);
+      drawRect(x+5, y+3, 4, 5, COL_SKIER_JACKET);
+      drawRect(x+1, y+4, 4, 1, COL_SKIER);
+      drawRect(x+9, y+4, 4, 1, COL_SKIER);
+      drawRect(x+1, y+4, 1, 8, COL_POLE);
+      drawRect(x+12, y+4, 1, 8, COL_POLE);
+      drawRect(x+4, y+8, 2, 4, COL_SKIER_PANTS);
+      drawRect(x+7, y+8, 2, 4, COL_SKIER_PANTS);
+      drawRect(x+1, y+12, 3, 4, COL_SKIER);
+      drawRect(x+6, y+12, 3, 4, COL_SKIER);
+      break;
+
+    case SKIER_LEFT:
+      drawRect(x+4, y+1, 4, 3, COL_SKIER);
+      drawRect(x+4, y+4, 4, 4, COL_SKIER_JACKET);
+      drawRect(x, y+5, 4, 1, COL_SKIER);
+      drawRect(x+8, y+5, 3, 1, COL_SKIER);
+      drawRect(x, y+5, 1, 7, COL_POLE);
+      drawRect(x+3, y+8, 3, 4, COL_SKIER_PANTS);
+      drawRect(x-2, y+11, 8, 2, COL_SKIER);
+      break;
+
+    case SKIER_FAR_LEFT:
+      drawRect(x+3, y+2, 4, 3, COL_SKIER);
+      drawRect(x+3, y+5, 4, 4, COL_SKIER_JACKET);
+      drawRect(x, y+6, 3, 1, COL_SKIER);
+      drawRect(x, y+6, 1, 7, COL_POLE);
+      drawRect(x+2, y+9, 3, 4, COL_SKIER_PANTS);
+      drawRect(x-3, y+12, 9, 2, COL_SKIER);
+      break;
+
+    case SKIER_DOWN_RIGHT:
+      drawRect(x+7, y, 4, 3, COL_SKIER);
+      drawRect(x+7, y+3, 4, 5, COL_SKIER_JACKET);
+      drawRect(x+3, y+4, 4, 1, COL_SKIER);
+      drawRect(x+11, y+4, 4, 1, COL_SKIER);
+      drawRect(x+3, y+4, 1, 8, COL_POLE);
+      drawRect(x+14, y+4, 1, 8, COL_POLE);
+      drawRect(x+7, y+8, 2, 4, COL_SKIER_PANTS);
+      drawRect(x+10, y+8, 2, 4, COL_SKIER_PANTS);
+      drawRect(x+7, y+12, 3, 4, COL_SKIER);
+      drawRect(x+12, y+12, 3, 4, COL_SKIER);
+      break;
+
+    case SKIER_RIGHT:
+      drawRect(x+8, y+1, 4, 3, COL_SKIER);
+      drawRect(x+8, y+4, 4, 4, COL_SKIER_JACKET);
+      drawRect(x+5, y+5, 3, 1, COL_SKIER);
+      drawRect(x+12, y+5, 4, 1, COL_SKIER);
+      drawRect(x+15, y+5, 1, 7, COL_POLE);
+      drawRect(x+8, y+8, 3, 4, COL_SKIER_PANTS);
+      drawRect(x+8, y+11, 8, 2, COL_SKIER);
+      break;
+
+    case SKIER_FAR_RIGHT:
+      drawRect(x+9, y+2, 4, 3, COL_SKIER);
+      drawRect(x+9, y+5, 4, 4, COL_SKIER_JACKET);
+      drawRect(x+13, y+6, 3, 1, COL_SKIER);
+      drawRect(x+15, y+6, 1, 7, COL_POLE);
+      drawRect(x+10, y+9, 3, 4, COL_SKIER_PANTS);
+      drawRect(x+8, y+12, 9, 2, COL_SKIER);
+      break;
+
+    case SKIER_CRASH:
+      // Equipment scattered
+      drawRect(x-4, y-1, 6, 1, COL_SKIER);       // ski flying
+      drawRect(x+12, y+13, 6, 1, COL_SKIER);      // other ski
+      drawRect(x+13, y, 1, 5, COL_POLE);           // pole flying
+      // Body tumbled
+      drawRect(x+3, y+3, 4, 3, COL_SKIER);        // head
+      drawRect(x+2, y+6, 6, 3, COL_SKIER_JACKET); // torso
+      drawRect(x+7, y+3, 2, 5, COL_SKIER_PANTS);  // leg up
+      drawRect(x, y+9, 2, 4, COL_SKIER_PANTS);    // leg down
+      break;
+
+    case SKIER_JUMP:
+      drawRect(x+6, y-2, 4, 3, COL_SKIER);
+      drawRect(x+6, y+1, 4, 5, COL_SKIER_JACKET);
+      drawRect(x+2, y+2, 4, 1, COL_SKIER);
+      drawRect(x+10, y+2, 4, 1, COL_SKIER);
+      drawRect(x+5, y+6, 6, 3, COL_SKIER_PANTS);
+      drawRect(x+4, y+9, 8, 2, COL_SKIER);
+      break;
+
+    case SKIER_EATEN:
+      break;
+  }
+}
+
+// --- TREES ---
+function drawSmallTree(x, y) {
+  drawRect(x+5, y+12, 2, 4, COL_TREE_TRUNK);
+  drawRect(x+5, y, 2, 2, COL_TREE_GREEN);
+  drawRect(x+3, y+2, 6, 2, COL_TREE_GREEN);
+  drawRect(x+1, y+4, 10, 3, COL_TREE_GREEN);
+  drawRect(x, y+7, 12, 3, COL_TREE_GREEN);
+  drawRect(x+1, y+10, 10, 2, COL_TREE_GREEN);
+  // Shadow/depth
+  drawRect(x+2, y+3, 2, 2, COL_TREE_DARK);
+  drawRect(x+1, y+6, 2, 2, COL_TREE_DARK);
+  drawRect(x+6, y+8, 3, 2, COL_TREE_DARK);
+  // Snow caps
+  drawPixel(x+5, y-1, COL_SNOW);
+  drawPixel(x+6, y-1, COL_SNOW);
+  drawPixel(x+3, y+1, COL_SNOW);
+  drawPixel(x+2, y+4, COL_SNOW);
+}
+
+function drawLargeTree(x, y) {
+  drawRect(x+8, y+22, 4, 6, COL_TREE_TRUNK);
+  drawRect(x+9, y, 2, 2, COL_TREE_GREEN);
+  drawRect(x+7, y+2, 6, 3, COL_TREE_GREEN);
+  drawRect(x+4, y+5, 12, 3, COL_TREE_GREEN);
+  drawRect(x+2, y+8, 16, 3, COL_TREE_GREEN);
+  drawRect(x+1, y+11, 18, 3, COL_TREE_GREEN);
+  drawRect(x, y+14, 20, 4, COL_TREE_GREEN);
+  drawRect(x+1, y+18, 18, 4, COL_TREE_GREEN);
+  // Depth
+  drawRect(x+5, y+4, 3, 2, COL_TREE_DARK);
+  drawRect(x+3, y+7, 3, 2, COL_TREE_DARK);
+  drawRect(x+10, y+10, 4, 2, COL_TREE_DARK);
+  drawRect(x+2, y+15, 4, 3, COL_TREE_DARK);
+  drawRect(x+13, y+16, 3, 2, COL_TREE_DARK);
+  // Snow
+  drawPixel(x+9, y-1, COL_SNOW);
+  drawPixel(x+10, y-1, COL_SNOW);
+}
+
+function drawBareTree(x, y) {
+  drawRect(x+5, y+3, 3, 14, COL_TREE_TRUNK);
+  drawRect(x+1, y+1, 4, 1, COL_TREE_TRUNK);
+  drawRect(x+1, y, 1, 2, COL_TREE_TRUNK);
+  drawRect(x+8, y+4, 4, 1, COL_TREE_TRUNK);
+  drawRect(x+11, y+2, 1, 3, COL_TREE_TRUNK);
+  drawRect(x+2, y+7, 3, 1, COL_TREE_TRUNK);
+  drawRect(x+2, y+6, 1, 2, COL_TREE_TRUNK);
+  drawRect(x+9, y+9, 3, 1, COL_TREE_TRUNK);
+  drawRect(x+11, y+8, 1, 2, COL_TREE_TRUNK);
+}
+
+// --- ROCK ---
+function drawRock(x, y) {
+  drawRect(x+3, y+1, 6, 6, COL_ROCK);
+  drawRect(x+1, y+2, 10, 4, COL_ROCK);
+  drawRect(x, y+3, 12, 2, COL_ROCK);
+  drawRect(x+2, y+1, 3, 1, COL_ROCK_LIGHT);
+  drawRect(x+1, y+2, 2, 1, COL_ROCK_LIGHT);
+  drawRect(x+6, y+5, 4, 2, COL_ROCK_DARK);
+  drawRect(x+3, y+6, 7, 1, COL_ROCK_DARK);
+}
+
+// --- RAMP ---
+function drawRamp(x, y) {
+  drawRect(x, y+4, 24, 2, COL_RAMP_RED);
+  drawRect(x+2, y+2, 20, 2, COL_RAMP_GREEN);
+  drawRect(x+4, y, 16, 2, COL_RAMP_BLUE);
+  drawRect(x+6, y-2, 12, 2, COL_RAMP_YELLOW);
+  drawRect(x+2, y+6, 20, 1, COL_ROCK_LIGHT);
+}
+
+// --- STUMP ---
+function drawStump(x, y) {
+  drawRect(x+2, y+2, 8, 5, COL_STUMP);
+  drawRect(x+3, y+1, 6, 1, COL_STUMP);
+  drawRect(x+4, y+3, 4, 2, '#A06020');
+  drawRect(x+5, y+4, 2, 1, '#C08040');
+}
+
+// --- DOG ---
+function drawDog(x, y, frame) {
+  var f = Math.floor(frame / 6) % 2;
+  drawRect(x+2, y+3, 10, 5, COL_DOG);
+  drawRect(x+12, y+1, 5, 5, COL_DOG);
+  drawRect(x+14, y-1, 2, 2, COL_DOG);
+  drawPixel(x+15, y+2, '#000');
+  if (f === 0) {
+    drawRect(x+3, y+8, 2, 4, COL_DOG);
+    drawRect(x+9, y+8, 2, 4, COL_DOG);
+  } else {
+    drawRect(x+4, y+8, 2, 4, COL_DOG);
+    drawRect(x+8, y+8, 2, 4, COL_DOG);
+  }
+  drawRect(x, y+1, 2, 3, COL_DOG);
+}
+
+// --- NPC SKIER ---
+function drawOtherSkier(x, y) {
+  drawRect(x+5, y, 4, 3, COL_SKIER);
+  drawRect(x+5, y+3, 4, 4, '#0000FF');
+  drawRect(x+4, y+7, 2, 4, COL_SKIER_PANTS);
+  drawRect(x+8, y+7, 2, 4, COL_SKIER_PANTS);
+  drawRect(x+3, y+11, 3, 1, COL_SKIER);
+  drawRect(x+8, y+11, 3, 1, COL_SKIER);
+}
+
+// --- SNOWBOARDER ---
+function drawSnowboarder(x, y) {
+  drawRect(x+5, y, 4, 3, COL_SKIER);
+  drawRect(x+4, y+3, 6, 4, COL_BOARDER);
+  drawRect(x+4, y+7, 3, 4, COL_BOARDER);
+  drawRect(x+7, y+7, 3, 4, COL_BOARDER);
+  drawRect(x+2, y+11, 10, 2, '#404040');
+}
+
+// --- YETI (Abominable Snow Monster) ---
+function drawYeti(x, y, frame) {
+  var f = Math.floor(frame / 8) % 2;
+  // Outline
+  drawRect(x+3, y+3, 18, 22, COL_YETI_OUTLINE);
+  drawRect(x+1, y+7, 22, 16, COL_YETI_OUTLINE);
+  // Body — dark gray
+  drawRect(x+4, y+4, 16, 20, COL_YETI_BODY);
+  drawRect(x+2, y+8, 20, 14, COL_YETI_BODY);
+  // Head
+  drawRect(x+5, y-1, 14, 7, COL_YETI_OUTLINE);
+  drawRect(x+6, y, 12, 6, COL_YETI_BODY);
+  // Fur texture
+  drawPixel(x+5, y+6, COL_YETI_FUR);
+  drawPixel(x+18, y+6, COL_YETI_FUR);
+  drawPixel(x+3, y+12, COL_YETI_FUR);
+  drawPixel(x+20, y+12, COL_YETI_FUR);
+  drawPixel(x+7, y+10, COL_YETI_FUR);
+  drawPixel(x+16, y+14, COL_YETI_FUR);
+  drawPixel(x+10, y+18, COL_YETI_FUR);
+  // Eyes — white on dark body
+  drawRect(x+8, y+1, 3, 3, '#FFF');
+  drawRect(x+13, y+1, 3, 3, '#FFF');
+  drawPixel(x+9, y+2, '#000');
+  drawPixel(x+14, y+2, '#000');
+  // Mouth
+  drawRect(x+9, y+5, 6, 2, '#CC0000');
+  drawPixel(x+10, y+5, '#FFF'); // tooth
+  drawPixel(x+13, y+5, '#FFF'); // tooth
+  // Arms
+  if (f === 0) {
+    drawRect(x-1, y+7, 4, 4, COL_YETI_BODY);
+    drawRect(x+21, y+7, 4, 4, COL_YETI_BODY);
+    drawRect(x-2, y+11, 3, 3, '#FFF'); // claws (white)
+    drawRect(x+23, y+11, 3, 3, '#FFF');
+  } else {
+    drawRect(x-1, y+10, 4, 4, COL_YETI_BODY);
+    drawRect(x+21, y+10, 4, 4, COL_YETI_BODY);
+    drawRect(x-2, y+14, 3, 3, '#FFF');
+    drawRect(x+23, y+14, 3, 3, '#FFF');
+  }
+  // Legs
+  if (f === 0) {
+    drawRect(x+5, y+22, 5, 6, COL_YETI_BODY);
+    drawRect(x+14, y+22, 5, 6, COL_YETI_BODY);
+    drawRect(x+3, y+26, 7, 3, COL_YETI_OUTLINE);
+    drawRect(x+14, y+26, 7, 3, COL_YETI_OUTLINE);
+  } else {
+    drawRect(x+4, y+22, 5, 7, COL_YETI_BODY);
+    drawRect(x+15, y+22, 5, 7, COL_YETI_BODY);
+    drawRect(x+2, y+27, 7, 3, COL_YETI_OUTLINE);
+    drawRect(x+15, y+27, 7, 3, COL_YETI_OUTLINE);
+  }
+}
+
+function drawYetiEating(x, y, frame) {
+  var f = Math.floor(frame / 15) % 3;
+  // Outline
+  drawRect(x+3, y+3, 18, 22, COL_YETI_OUTLINE);
+  drawRect(x+1, y+7, 22, 16, COL_YETI_OUTLINE);
+  // Body
+  drawRect(x+4, y+4, 16, 20, COL_YETI_BODY);
+  drawRect(x+2, y+8, 20, 14, COL_YETI_BODY);
+  // Head tilted back
+  drawRect(x+5, y-3, 14, 7, COL_YETI_OUTLINE);
+  drawRect(x+6, y-2, 12, 6, COL_YETI_BODY);
+  // Eyes (happy squint) — white on dark
+  drawRect(x+8, y-1, 3, 1, '#FFF');
+  drawRect(x+13, y-1, 3, 1, '#FFF');
+  // Open mouth
+  drawRect(x+8, y+3, 8, 4, '#CC0000');
+  // Skier legs sticking out
+  if (f < 2) {
+    drawRect(x+9, y+1, 2, 3, COL_SKIER_PANTS);
+    drawRect(x+13, y+1, 2, 3, COL_SKIER_PANTS);
+    drawRect(x+8, y-1, 2, 3, COL_SKIER);
+    drawRect(x+14, y-1, 2, 3, COL_SKIER);
+  }
+  // Arms raised
+  drawRect(x-1, y+5, 4, 4, COL_YETI_BODY);
+  drawRect(x+21, y+5, 4, 4, COL_YETI_BODY);
+  // Legs
+  drawRect(x+5, y+22, 5, 6, COL_YETI_BODY);
+  drawRect(x+14, y+22, 5, 6, COL_YETI_BODY);
+  drawRect(x+3, y+26, 7, 3, COL_YETI_OUTLINE);
+  drawRect(x+14, y+26, 7, 3, COL_YETI_OUTLINE);
+}
+
+// --- FLAG (for slalom) ---
+function drawFlag(x, y, isRed) {
+  var col = isRed ? COL_FLAG_RED : COL_FLAG_BLUE;
+  drawRect(x+3, y, 1, 14, '#000');
+  drawRect(x+4, y, 8, 5, col);
+}
+
+// ============================================================
+// OBSTACLE TYPES & GENERATION
+// ============================================================
+
+var OBS_SMALL_TREE = 0;
+var OBS_LARGE_TREE = 1;
+var OBS_BARE_TREE = 2;
+var OBS_ROCK = 3;
+var OBS_RAMP = 4;
+var OBS_STUMP = 5;
+var OBS_DOG = 6;
+var OBS_OTHER_SKIER = 7;
+var OBS_SNOWBOARDER = 8;
+var OBS_FLAG_RED = 9;
+var OBS_FLAG_BLUE = 10;
+
+var OBS_HITBOX = [
+  { w: 12, h: 16 },  // small tree
+  { w: 20, h: 28 },  // large tree
+  { w: 13, h: 17 },  // bare tree
+  { w: 12, h: 7 },   // rock
+  { w: 24, h: 6 },   // ramp
+  { w: 12, h: 7 },   // stump
+  { w: 17, h: 12 },  // dog
+  { w: 14, h: 12 },  // other skier
+  { w: 14, h: 13 },  // snowboarder
+  { w: 12, h: 14 },  // flag red
+  { w: 12, h: 14 },  // flag blue
+];
+
+function spawnObstacles(fromY, toY) {
+  // Difficulty curve: density increases with distance
+  var baseDensity = 0.10;
+  var distanceFactor = Math.min(game.distance / 5000, 1);
+  var density = baseDensity + distanceFactor * 0.04;
+  var count = Math.floor((toY - fromY) * density);
+
+  for (var i = 0; i < count; i++) {
+    var type;
+    var r = Math.random();
+    if (r < 0.28) type = OBS_SMALL_TREE;
+    else if (r < 0.45) type = OBS_LARGE_TREE;
+    else if (r < 0.52) type = OBS_BARE_TREE;
+    else if (r < 0.64) type = OBS_ROCK;
+    else if (r < 0.72) type = OBS_RAMP;
+    else if (r < 0.77) type = OBS_STUMP;
+    else if (r < 0.83) type = OBS_DOG;
+    else if (r < 0.90) type = OBS_OTHER_SKIER;
+    else type = OBS_SNOWBOARDER;
+
+    var ox = (Math.random() - 0.5) * GAME_W * 1.1;
+    var oy = fromY + Math.random() * (toY - fromY);
+    if (Math.abs(ox) < 40 && oy < 200) continue;
+
+    game.obstacles.push({
+      type: type, x: ox, y: oy,
+      frame: Math.floor(Math.random() * 100),
+      hit: false
+    });
+  }
+}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+
+function initGame() {
+  game.distance = 0;
+  game.speed = 0;
+  game.style = 0;
+  game.time = 0;
+  game.skierX = 0;
+  game.skierY = 100;
+  game.skierState = SKIER_DOWN;
+  game.skierVx = 0;
+  game.skierVy = 0;
+  game.cameraY = 0;
+  game.obstacles = [];
+  game.obstacleSpawnY = 0;
+  game.yeti = null;
+  game.yetiActive = false;
+  game.yetiEating = false;
+  game.yetiEatTimer = 0;
+  game.jumpTimer = 0;
+  game.jumping = false;
+  game.jumpHeight = 0;
+  game.crashTimer = 0;
+  game.crashed = false;
+  game.fastMode = false;
+  game.frame = 0;
+  game.gameOver = false;
+  game.running = true;
+  game.showInstructions = true;
+  game.instructionTimer = 0;
+  game.tracks = [];
+  game.lastTrackY = 0;
+
+  spawnObstacles(-100, GAME_H + 500);
+  game.obstacleSpawnY = GAME_H + 500;
+}
+
+function updateGame() {
+  if (!game.running || game.paused) return;
+
+  var dt60 = game.dt60 || 1; // normalized dt (1.0 = 60fps)
+
+  game.frame += dt60;
+  game.time += game.dt;
+
+  if (game.showInstructions && game.speed > 0) {
+    game.instructionTimer += dt60;
+    if (game.instructionTimer > 180) game.showInstructions = false;
+  }
+
+  // Crash recovery
+  if (game.crashed) {
+    game.crashTimer -= dt60;
+    if (game.crashTimer <= 0) {
+      game.crashed = false;
+      game.skierState = SKIER_DOWN;
+    }
+    return;
+  }
+
+  // Yeti eating
+  if (game.yetiEating) {
+    game.yetiEatTimer += dt60;
+    if (game.yetiEatTimer > 120) {
+      game.gameOver = true;
+      game.running = false;
+    }
+    return;
+  }
+
+  // Jumping
+  if (game.jumping) {
+    game.jumpTimer += dt60;
+    game.jumpHeight = Math.sin(game.jumpTimer / 22 * Math.PI) * 30;
+    if (game.jumpTimer >= 22) {
+      game.jumping = false;
+      game.jumpHeight = 0;
+      game.jumpTimer = 0;
+      game.style += 6 + Math.floor(Math.random() * 30);
+    }
+  }
+
+  // Input
+  var targetVx = 0;
+  var accel = 0.3 * dt60;
+  var maxSp = game.fastMode ? game.fastSpeed : game.normalMaxSpeed;
+
+  if (game.keys['ArrowLeft'] || game.keys['a']) {
+    targetVx = -maxSp * 0.7;
+    if (game.keys['ArrowDown'] || game.keys['s']) {
+      game.skierState = SKIER_DOWN_LEFT;
+    } else {
+      game.skierState = SKIER_LEFT;
+    }
+  } else if (game.keys['ArrowRight'] || game.keys['d']) {
+    targetVx = maxSp * 0.7;
+    if (game.keys['ArrowDown'] || game.keys['s']) {
+      game.skierState = SKIER_DOWN_RIGHT;
+    } else {
+      game.skierState = SKIER_RIGHT;
+    }
+  } else {
+    game.skierState = SKIER_DOWN;
+  }
+
+  // Touch input
+  if (game.touchX !== null) {
+    var dx = game.touchX - GAME_W / 2;
+    if (Math.abs(dx) > 30) {
+      targetVx = (dx / (GAME_W / 2)) * maxSp;
+      if (targetVx < 0) {
+        game.skierState = Math.abs(targetVx) > maxSp * 0.5 ? SKIER_LEFT : SKIER_DOWN_LEFT;
+      } else {
+        game.skierState = Math.abs(targetVx) > maxSp * 0.5 ? SKIER_RIGHT : SKIER_DOWN_RIGHT;
+      }
+    }
+  }
+
+  if (game.jumping) game.skierState = SKIER_JUMP;
+
+  // Gravity / acceleration — no uphill allowed
+  if (game.keys['ArrowDown'] || game.keys['s']) {
+    game.speed = Math.min(maxSp, game.speed + accel);
+  } else if (game.skierState === SKIER_LEFT || game.skierState === SKIER_RIGHT) {
+    game.speed = Math.min(maxSp * 0.5, game.speed + accel * 0.2);
+  } else {
+    game.speed = Math.min(maxSp * 0.75, game.speed + accel * 0.4);
+  }
+
+  // Speed can't go below 0 — no uphill
+  game.speed = Math.max(0, game.speed);
+
+  // Apply velocity (multiplied by dt60 for frame-rate independence)
+  var lerpFactor = 1 - Math.pow(0.85, dt60);
+  game.skierVx += (targetVx - game.skierVx) * lerpFactor;
+  game.skierVy = game.speed;
+
+  game.skierX += game.skierVx * dt60;
+  game.skierY += game.skierVy * dt60;
+  game.cameraY = game.skierY - GAME_H * 0.35;
+  game.distance = Math.max(0, Math.floor(game.skierY / 10));
+
+  // Ski tracks
+  if (game.speed > 0.5 && !game.jumping && !game.crashed) {
+    if (game.skierY - game.lastTrackY > 3) {
+      game.tracks.push({
+        x: game.skierX + 5,
+        x2: game.skierX + 11,
+        y: game.skierY + 14,
+        state: game.skierState
+      });
+      game.lastTrackY = game.skierY;
+      // Limit track history
+      if (game.tracks.length > 200) game.tracks.shift();
+    }
+  }
+
+  // Spawn obstacles
+  var spawnAhead = game.cameraY + GAME_H + 300;
+  if (spawnAhead > game.obstacleSpawnY) {
+    spawnObstacles(game.obstacleSpawnY, spawnAhead);
+    game.obstacleSpawnY = spawnAhead;
+  }
+
+  // Clean up old obstacles (both behind camera AND far off sides)
+  var camLeft = game.skierX - GAME_W * 2;
+  var camRight = game.skierX + GAME_W * 2;
+  game.obstacles = game.obstacles.filter(function(o) {
+    return o.y > game.cameraY - 100 && o.x > camLeft && o.x < camRight;
+  });
+
+  // Collision
+  if (!game.jumping) {
+    var skierHitX = game.skierX + 4;
+    var skierHitY = game.skierY + 4;
+    var skierHitW = 8;
+    var skierHitH = 10;
+
+    for (var i = 0; i < game.obstacles.length; i++) {
+      var o = game.obstacles[i];
+      if (o.hit) continue;
+      var hb = OBS_HITBOX[o.type];
+      if (!hb) continue;
+
+      // Ramps trigger jump
+      if (o.type === OBS_RAMP) {
+        if (rectsOverlap(skierHitX, skierHitY, skierHitW, skierHitH, o.x, o.y, hb.w, hb.h)) {
+          o.hit = true;
+          game.jumping = true;
+          game.jumpTimer = 0;
+          game.jumpHeight = 0;
+          game.style += 6; // +6 for jumping over something
+        }
+        continue;
+      }
+
+      // Dogs don't crash you — they just scatter (original behavior)
+      if (o.type === OBS_DOG) {
+        if (rectsOverlap(skierHitX, skierHitY, skierHitW, skierHitH, o.x, o.y, hb.w, hb.h)) {
+          o.hit = true;
+          game.style += 3; // +3 for scaring a dog
+        }
+        continue;
+      }
+
+      // NPC skiers/boarders — can collide
+      if (o.type === OBS_OTHER_SKIER || o.type === OBS_SNOWBOARDER) {
+        if (rectsOverlap(skierHitX, skierHitY, skierHitW, skierHitH, o.x, o.y, hb.w, hb.h)) {
+          o.hit = true;
+          game.crashed = true;
+          game.crashTimer = 35;
+          game.skierState = SKIER_CRASH;
+          game.speed = 0;
+          game.skierVx = 0;
+          game.style = Math.max(0, game.style - 32);
+        }
+        continue;
+      }
+
+      // Flags — pass through
+      if (o.type === OBS_FLAG_RED || o.type === OBS_FLAG_BLUE) continue;
+
+      // Trees, rocks, stumps — crash
+      if (rectsOverlap(skierHitX, skierHitY, skierHitW, skierHitH, o.x, o.y, hb.w, hb.h)) {
+        o.hit = true;
+        game.crashed = true;
+        game.crashTimer = 45;
+        game.skierState = SKIER_CRASH;
+        game.speed = 0;
+        game.skierVx = 0;
+        game.style = Math.max(0, game.style - 32); // -32 like original
+        break;
+      }
+    }
+  }
+
+  // Yeti at 2000m
+  if (game.distance >= 2000 && !game.yetiActive && !game.yetiEating) {
+    game.yetiActive = true;
+    game.yeti = {
+      x: game.skierX + (Math.random() > 0.5 ? 250 : -250),
+      y: game.cameraY + GAME_H + 80,
+      speed: 9 // base yeti speed — slightly faster than normal max (8)
+    };
+  }
+
+  if (game.yetiActive && game.yeti) {
+    // Yeti always moves at base speed regardless of player mode
+    var ydx = game.skierX - game.yeti.x;
+    var ydy = game.skierY - game.yeti.y;
+    var ydist = Math.sqrt(ydx * ydx + ydy * ydy);
+    if (ydist > 0) {
+      game.yeti.x += (ydx / ydist) * game.yeti.speed * dt60;
+      game.yeti.y += (ydy / ydist) * game.yeti.speed * dt60;
+    }
+
+    // If player escapes far enough in fast mode, yeti gives up
+    if (game.fastMode && ydist > 600) {
+      game.yetiActive = false;
+      game.yeti = null;
+    }
+
+    // Catch check
+    if (game.yeti && Math.abs(game.yeti.x - game.skierX) < 15 &&
+        Math.abs(game.yeti.y - game.skierY) < 15 && !game.jumping) {
+      game.yetiEating = true;
+      game.yetiEatTimer = 0;
+      game.speed = 0;
+      game.skierState = SKIER_EATEN;
+    }
+  }
+
+  // NPC movement (delta-time scaled)
+  for (var j = 0; j < game.obstacles.length; j++) {
+    var ob = game.obstacles[j];
+    ob.frame += dt60;
+    if (ob.type === OBS_DOG) {
+      ob.x += Math.sin(ob.frame * 0.05) * 0.6 * dt60;
+      ob.y += 0.4 * dt60;
+    } else if (ob.type === OBS_OTHER_SKIER) {
+      ob.y += 2.2 * dt60;
+      ob.x += Math.sin(ob.frame * 0.03) * 0.8 * dt60;
+    } else if (ob.type === OBS_SNOWBOARDER) {
+      ob.y += 2.8 * dt60;
+      ob.x += Math.cos(ob.frame * 0.04) * 1.2 * dt60;
+    }
+  }
+}
+
+function rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2) {
+  return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function render() {
+  ctx.fillStyle = COL_SNOW;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  var camY = game.cameraY;
+
+  // Snow texture — stable world-space dots
+  drawSnowTexture(camY);
+
+  // Ski tracks
+  drawTracks(camY);
+
+  // Collect visible obstacles
+  var visObs = [];
+  for (var k = 0; k < game.obstacles.length; k++) {
+    var o = game.obstacles[k];
+    var osy = o.y - camY;
+    var osx = o.x - game.skierX + GAME_W / 2;
+    if (osy > -40 && osy < GAME_H + 40 && osx > -60 && osx < GAME_W + 60) {
+      visObs.push({ obs: o, sx: osx, sy: osy });
+    }
+  }
+
+  var skierScreenX = GAME_W / 2 - 8;
+  var skierScreenY = game.skierY - camY;
+
+  var yetiScreen = null;
+  if (game.yetiActive && game.yeti) {
+    yetiScreen = {
+      sx: game.yeti.x - game.skierX + GAME_W / 2 - 12,
+      sy: game.yeti.y - camY
+    };
+  }
+
+  // Sort by Y for depth ordering
+  visObs.sort(function(a, b) { return a.sy - b.sy; });
+
+  var skierDrawn = false;
+  var yetiDrawn = false;
+
+  for (var m = 0; m < visObs.length; m++) {
+    var vo = visObs[m];
+
+    if (!skierDrawn && skierScreenY <= vo.sy) {
+      if (!game.yetiEating) drawSkier(skierScreenX, skierScreenY, game.skierState);
+      skierDrawn = true;
+    }
+
+    if (!yetiDrawn && yetiScreen && yetiScreen.sy <= vo.sy) {
+      if (game.yetiEating) drawYetiEating(yetiScreen.sx, yetiScreen.sy, game.frame);
+      else drawYeti(yetiScreen.sx, yetiScreen.sy, game.frame);
+      yetiDrawn = true;
+    }
+
+    var ob = vo.obs;
+    switch(ob.type) {
+      case OBS_SMALL_TREE: drawSmallTree(vo.sx, vo.sy); break;
+      case OBS_LARGE_TREE: drawLargeTree(vo.sx, vo.sy); break;
+      case OBS_BARE_TREE: drawBareTree(vo.sx, vo.sy); break;
+      case OBS_ROCK: drawRock(vo.sx, vo.sy); break;
+      case OBS_RAMP: drawRamp(vo.sx, vo.sy); break;
+      case OBS_STUMP: drawStump(vo.sx, vo.sy); break;
+      case OBS_DOG: drawDog(vo.sx, vo.sy, ob.frame); break;
+      case OBS_OTHER_SKIER: drawOtherSkier(vo.sx, vo.sy); break;
+      case OBS_SNOWBOARDER: drawSnowboarder(vo.sx, vo.sy); break;
+      case OBS_FLAG_RED: drawFlag(vo.sx, vo.sy, true); break;
+      case OBS_FLAG_BLUE: drawFlag(vo.sx, vo.sy, false); break;
+    }
+  }
+
+  if (!skierDrawn && !game.yetiEating) drawSkier(skierScreenX, skierScreenY, game.skierState);
+  if (!yetiDrawn && yetiScreen) {
+    if (game.yetiEating) drawYetiEating(yetiScreen.sx, yetiScreen.sy, game.frame);
+    else drawYeti(yetiScreen.sx, yetiScreen.sy, game.frame);
+  }
+
+  drawHUD();
+
+  if (game.showInstructions && !game.gameOver) drawInstructions();
+  if (game.paused) drawPaused();
+  if (game.gameOver) drawGameOver();
+}
+
+function drawSnowTexture(camY) {
+  // Stable world-space snow dots
+  ctx.fillStyle = '#E0E0E8';
+  var tileH = GAME_H;
+  var startTile = Math.floor(camY / tileH);
+  for (var t = startTile - 1; t <= startTile + 2; t++) {
+    var seed = t * 7919;
+    for (var i = 0; i < 60; i++) {
+      var h = ((seed + i * 2654435761) >>> 0);
+      var wx = (h % (GAME_W * 3)) - GAME_W;
+      var wy = t * tileH + ((h >>> 12) % tileH);
+      var screenX = wx - game.skierX + GAME_W / 2;
+      var screenY = wy - camY;
+      if (screenX >= 0 && screenX < GAME_W && screenY >= 0 && screenY < GAME_H) {
+        ctx.fillRect(Math.floor(screenX * SCALE), Math.floor(screenY * SCALE),
+                     Math.ceil(SCALE), Math.ceil(SCALE));
+      }
+    }
+  }
+}
+
+function drawTracks(camY) {
+  ctx.fillStyle = '#D0D0D8';
+  for (var i = 0; i < game.tracks.length; i++) {
+    var tr = game.tracks[i];
+    var sy = tr.y - camY;
+    if (sy < -10 || sy > GAME_H + 10) continue;
+    var sx1 = tr.x - game.skierX + GAME_W / 2;
+    var sx2 = tr.x2 - game.skierX + GAME_W / 2;
+
+    // Fade with distance
+    var age = game.skierY - tr.y;
+    if (age > 400) continue;
+    var alpha = Math.max(0.1, 1 - age / 400);
+    ctx.globalAlpha = alpha;
+
+    // Two parallel lines for ski tracks
+    ctx.fillRect(Math.floor(sx1 * SCALE), Math.floor(sy * SCALE),
+                 Math.ceil(SCALE), Math.ceil(3 * SCALE));
+    ctx.fillRect(Math.floor(sx2 * SCALE), Math.floor(sy * SCALE),
+                 Math.ceil(SCALE), Math.ceil(3 * SCALE));
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  var hx = GAME_W - 155;
+  var hy = 8;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillRect(hx, hy, 148, 58);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(hx, hy, 148, 58);
+
+  ctx.fillStyle = '#000';
+  ctx.font = '10px monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+
+  var mins = Math.floor(game.time / 60);
+  var secs = Math.floor(game.time % 60);
+  var timeStr = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+
+  ctx.fillText('Time:  ' + timeStr, hx + 6, hy + 5);
+  ctx.fillText('Dist:  ' + game.distance + 'm', hx + 6, hy + 18);
+  ctx.fillText('Speed: ' + Math.floor(Math.abs(game.speed) * 10), hx + 6, hy + 31);
+  ctx.fillText('Style: ' + game.style, hx + 6, hy + 44);
+
+  // Fast mode indicator
+  if (game.fastMode && game.started && game.running) {
+    ctx.fillStyle = '#FF0000';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText('FAST!', hx + 100, hy + 31);
+  }
+
+  // Yeti warning
+  if (game.distance >= 1800 && game.distance < 2000 && !game.yetiActive) {
+    ctx.fillStyle = '#FF0000';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('!! YETI APPROACHES !!', GAME_W / 2, 4);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawInstructions() {
+  var cx = GAME_W / 2;
+  var cy = GAME_H - 80;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(cx - 155, cy - 10, 310, 60);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('Arrow Keys / WASD to steer', cx, cy);
+  ctx.fillText('F = Toggle fast  |  Space/J = Jump', cx, cy + 14);
+  ctx.fillText('P = Pause  |  Hit ramps for style', cx, cy + 28);
+  if (isMobile) {
+    ctx.fillText('Use F button for fast mode', cx, cy + 42);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawPaused() {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#FFF';
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('PAUSED', GAME_W / 2, GAME_H / 2);
+  ctx.font = '12px monospace';
+  ctx.fillText('Press P to resume', GAME_W / 2, GAME_H / 2 + 30);
+  ctx.textAlign = 'left';
+}
+
+function drawGameOver() {
+  var cx = GAME_W / 2;
+  var cy = GAME_H / 2;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(cx - 130, cy - 45, 260, 90);
+
+  ctx.fillStyle = '#FF4444';
+  ctx.font = 'bold 22px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GAME OVER', cx, cy - 20);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '11px monospace';
+  ctx.fillText('Distance: ' + game.distance + 'm', cx, cy + 2);
+  ctx.fillText('Style: ' + game.style, cx, cy + 16);
+  ctx.fillText('Press SPACE or tap to restart', cx, cy + 33);
+  ctx.textAlign = 'left';
+}
+
+// ============================================================
+// INPUT
+// ============================================================
+
+document.addEventListener('keydown', function(e) {
+  game.keys[e.key] = true;
+
+  if (e.key === 'f' || e.key === 'F') {
+    game.fastMode = !game.fastMode; // Toggle like original
+  }
+
+  // Jump key — Space, J, or Insert (original used Space)
+  if ((e.key === ' ' || e.key === 'Insert' || e.key === 'j' || e.key === 'J')) {
+    e.preventDefault();
+    if (game.gameOver || !game.started) {
+      game.started = true;
+      initGame();
+    } else if (game.running && !game.crashed && !game.jumping) {
+      game.jumping = true;
+      game.jumpTimer = 0;
+      game.jumpHeight = 0;
+    }
+  }
+
+  if (e.key === 'p' || e.key === 'P') {
+    if (game.started && game.running) {
+      game.paused = !game.paused;
+    }
+  }
+
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.key) !== -1) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('keyup', function(e) {
+  game.keys[e.key] = false;
+  // F is a toggle now — no keyup handling needed
+});
+
+// Touch
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  if (game.gameOver || !game.started) {
+    game.started = true;
+    initGame();
+    return;
+  }
+  var touch = e.touches[0];
+  var rect = canvas.getBoundingClientRect();
+  game.touchX = (touch.clientX - rect.left) / (game.displayScale || 1);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  var touch = e.touches[0];
+  var rect = canvas.getBoundingClientRect();
+  game.touchX = (touch.clientX - rect.left) / (game.displayScale || 1);
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  game.touchX = null;
+}, { passive: false });
+
+// Fast button (mobile)
+fastBtn.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  game.fastMode = !game.fastMode; // Toggle like original
+  fastBtn.style.background = game.fastMode ? 'rgba(255,0,0,0.8)' : 'rgba(255,0,0,0.5)';
+  fastBtn.textContent = game.fastMode ? 'F!' : 'F';
+}, { passive: false });
+
+// Mouse
+canvas.addEventListener('mousedown', function(e) {
+  if (game.gameOver || !game.started) {
+    game.started = true;
+    initGame();
+  }
+});
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+
+function gameLoop(timestamp) {
+  if (!timestamp) timestamp = performance.now();
+  if (game.lastTime === 0) game.lastTime = timestamp;
+  var rawDt = (timestamp - game.lastTime) / 1000;
+  game.lastTime = timestamp;
+  // Clamp dt to prevent spiral of death (min 15fps, max 240fps)
+  game.dt = Math.min(rawDt, 1/15);
+  // Normalize: dt60 = 1.0 means running at exactly 60fps
+  game.dt60 = game.dt * 60;
+
+  if (game.started) {
+    updateGame();
+    render();
+  } else {
+    drawTitleScreen();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function drawTitleScreen() {
+  ctx.fillStyle = COL_SNOW;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SkiFree', GAME_W / 2, GAME_H / 2 - 70);
+
+  // Decorative scene
+  drawSkier(GAME_W / 2 - 8, GAME_H / 2 - 25, SKIER_DOWN);
+  drawSmallTree(GAME_W / 2 - 130, GAME_H / 2 + 20);
+  drawLargeTree(GAME_W / 2 + 80, GAME_H / 2);
+  drawSmallTree(GAME_W / 2 - 60, GAME_H / 2 + 55);
+  drawRock(GAME_W / 2 + 40, GAME_H / 2 + 65);
+  drawSmallTree(GAME_W / 2 + 140, GAME_H / 2 + 40);
+  drawRamp(GAME_W / 2 - 12, GAME_H / 2 + 85);
+  drawYeti(GAME_W / 2 + 170, GAME_H / 2 - 10, 0);
+
+  ctx.fillStyle = '#000';
+  ctx.font = '13px monospace';
+  ctx.fillText('Press SPACE or tap to start', GAME_W / 2, GAME_H / 2 + 120);
+
+  ctx.font = '9px monospace';
+  ctx.fillStyle = '#555';
+  ctx.fillText('Arrows/WASD = steer  |  F = Fast  |  Space/J = Jump', GAME_W / 2, GAME_H / 2 + 145);
+  ctx.fillText('Avoid trees & rocks  |  Hit ramps for style', GAME_W / 2, GAME_H / 2 + 160);
+  ctx.fillText('Beware the Yeti at 2000m!', GAME_W / 2, GAME_H / 2 + 175);
+  ctx.textAlign = 'left';
+}
+
+// Init
+resize();
+window.addEventListener('resize', resize);
+gameLoop();
+
+})();
+</script>
+</body>
+</html>
