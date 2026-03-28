@@ -19,6 +19,7 @@ import {
   Volume2,
   Skull,
   Newspaper,
+  Type,
 } from "lucide-react";
 
 const apps = [
@@ -154,6 +155,13 @@ const apps = [
     href: "/news",
     icon: Newspaper,
     color: "#D97757",
+  },
+  {
+    name: "Textflow",
+    desc: "ASCII text experiments",
+    href: "/textflow",
+    icon: Type,
+    color: "#ff6b4a",
   },
 ];
 

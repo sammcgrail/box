@@ -268,6 +268,22 @@ sebland.com {
         header Cache-Control "public, max-age=3600"
     }
 
+    # textflow — ASCII text experiments
+    @textflow_noslash path /textflow
+    redir @textflow_noslash /textflow/ permanent
+    handle /textflow/* {
+        uri strip_prefix /textflow
+        reverse_proxy host.docker.internal:20004
+    }
+
+    # pizza — pixel pizza
+    @pizza_noslash path /pizza
+    redir @pizza_noslash /pizza/ permanent
+    handle /pizza/* {
+        uri strip_prefix /pizza
+        reverse_proxy host.docker.internal:20003
+    }
+
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
