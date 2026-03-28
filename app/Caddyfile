@@ -287,7 +287,7 @@ sebland.com {
     # seb status dashboard (basic auth protected)
     handle /seb* {
         uri strip_prefix /seb
-        basicauth {
+        basic_auth {
             seb $2a$14$0.SeIVFOQocN6SKk.jVtGeTqh2C1ksc/VEStWdSWCi8IpA71PHMvy
         }
         reverse_proxy host.docker.internal:8765
@@ -306,5 +306,15 @@ sebland.com {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    handle_errors {
+        @401 expression {err.status_code} == 401
+        handle @401 {
+            header Content-Type "text/html; charset=utf-8"
+            respond <<HTML
+                <html><body style="background:#111;color:#fff;font-family:monospace;display:flex;justify-content:center;align-items:center;height:100vh;margin:0"><h1>401 &mdash; auth required</h1></body></html>
+                HTML 401
+        }
     }
 }
